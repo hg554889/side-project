@@ -48,3 +48,6 @@ coverage/
 # Build outputs
 dist/
 build/
+
+# Crawling
+__pycache__
