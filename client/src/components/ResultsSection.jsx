@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -25,6 +26,7 @@ import { useApp } from '../contexts/AppContext';
 
 const ResultsSection = () => {
   const { state } = useApp();
+  const navigate = useNavigate();
 
   const getTrendIcon = (trend) => {
     switch (trend) {
@@ -377,6 +379,7 @@ const ResultsSection = () => {
           <Button
             variant="contained"
             startIcon={<AssessmentIcon />}
+            onClick={() => navigate(`/analysis/${Date.now()}`)}
             sx={{
               backgroundColor: '#1976d2',
               border: '2px solid #333',

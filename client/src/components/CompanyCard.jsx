@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -15,8 +16,12 @@ import {
 
 const CompanyCard = ({ company, onClick }) => {
   const [hovered, setHovered] = useState(false);
+  const navigate = useNavigate();
 
   const handleClick = () => {
+    // 채용공고 상세 페이지로 이동
+    navigate(`/jobs/${company.id}`);
+
     if (onClick) {
       onClick(company);
     }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -11,10 +12,12 @@ import { Work as WorkIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 
 const Header = () => {
-  const { state, actions } = useApp();
+  const { actions } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleNavigate = (page) => {
-    actions.setPage(page);
+  const handleNavigate = (path) => {
+    navigate(path);
     actions.clearError();
   };
 
@@ -66,8 +69,8 @@ const Header = () => {
           {/* Navigation */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
-              variant={state.currentPage === 'main' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('main')}
+              variant={location.pathname === '/' ? 'contained' : 'text'}
+              onClick={() => handleNavigate('/')}
               sx={{
                 borderRadius: 2,
                 px: 3,
@@ -75,12 +78,12 @@ const Header = () => {
                 fontWeight: 600,
                 fontSize: '15px',
                 backgroundColor:
-                  state.currentPage === 'main' ? '#2563eb' : 'transparent',
-                color: state.currentPage === 'main' ? 'white' : '#64748b',
+                  location.pathname === '/' ? '#2563eb' : 'transparent',
+                color: location.pathname === '/' ? 'white' : '#64748b',
                 boxShadow: 'none',
                 '&:hover': {
                   backgroundColor:
-                    state.currentPage === 'main' ? '#1d4ed8' : '#f1f5f9',
+                    location.pathname === '/' ? '#1d4ed8' : '#f1f5f9',
                   boxShadow: 'none',
                 },
                 transition: 'all 0.2s ease',
@@ -89,8 +92,8 @@ const Header = () => {
               홈
             </Button>
             <Button
-              variant={state.currentPage === 'analysis' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('analysis')}
+              variant={location.pathname === '/analysis' ? 'contained' : 'text'}
+              onClick={() => handleNavigate('/analysis')}
               sx={{
                 borderRadius: 2,
                 px: 3,
@@ -98,18 +101,64 @@ const Header = () => {
                 fontWeight: 600,
                 fontSize: '15px',
                 backgroundColor:
-                  state.currentPage === 'analysis' ? '#2563eb' : 'transparent',
-                color: state.currentPage === 'analysis' ? 'white' : '#64748b',
+                  location.pathname === '/analysis' ? '#2563eb' : 'transparent',
+                color: location.pathname === '/analysis' ? 'white' : '#64748b',
                 boxShadow: 'none',
                 '&:hover': {
                   backgroundColor:
-                    state.currentPage === 'analysis' ? '#1d4ed8' : '#f1f5f9',
+                    location.pathname === '/analysis' ? '#1d4ed8' : '#f1f5f9',
                   boxShadow: 'none',
                 },
                 transition: 'all 0.2s ease',
               }}
             >
               분석
+            </Button>
+            <Button
+              variant={location.pathname === '/trends' ? 'contained' : 'text'}
+              onClick={() => handleNavigate('/trends')}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
+                fontWeight: 600,
+                fontSize: '15px',
+                backgroundColor:
+                  location.pathname === '/trends' ? '#2563eb' : 'transparent',
+                color: location.pathname === '/trends' ? 'white' : '#64748b',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor:
+                    location.pathname === '/trends' ? '#1d4ed8' : '#f1f5f9',
+                  boxShadow: 'none',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              트렌드
+            </Button>
+            <Button
+              variant={location.pathname === '/compare' ? 'contained' : 'text'}
+              onClick={() => handleNavigate('/compare')}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
+                fontWeight: 600,
+                fontSize: '15px',
+                backgroundColor:
+                  location.pathname === '/compare' ? '#2563eb' : 'transparent',
+                color: location.pathname === '/compare' ? 'white' : '#64748b',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor:
+                    location.pathname === '/compare' ? '#1d4ed8' : '#f1f5f9',
+                  boxShadow: 'none',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              비교
             </Button>
           </Box>
         </Toolbar>

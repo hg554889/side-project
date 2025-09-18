@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Card,
@@ -20,6 +21,7 @@ import { mockCompanies } from '../utils/mockData';
 
 const MainPage = () => {
   const { state, actions } = useApp();
+  const navigate = useNavigate();
 
   // Filter companies based on search query and filters
   const filteredCompanies = useMemo(() => {
@@ -62,7 +64,7 @@ const MainPage = () => {
   };
 
   const handleAnalysisNavigation = () => {
-    actions.setPage('analysis');
+    navigate('/analysis');
   };
 
   const getActiveFilterCount = () => {

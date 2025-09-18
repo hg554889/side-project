@@ -1,10 +1,19 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, Box } from '@mui/material';
-import { AppProvider, useApp } from './contexts/AppContext';
+import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/Header';
 import MainPage from './pages/MainPage';
 import AnalysisPage from './pages/AnalysisPage';
+import DetailedAnalysisPage from './pages/DetailedAnalysisPage';
+import TrendsPage from './pages/TrendsPage';
+import AdminPage from './pages/AdminPage';
+import ComparisonPage from './pages/ComparisonPage';
+import JobDetailPage from './pages/JobDetailPage';
+import LearningPathsPage from './pages/LearningPathsPage';
 
 // Create custom MUI theme
 const theme = createTheme({
@@ -176,19 +185,6 @@ const theme = createTheme({
 
 // Main App Content Component
 const AppContent = () => {
-  const { state } = useApp();
-
-  const renderCurrentPage = () => {
-    switch (state.currentPage) {
-      case 'main':
-        return <MainPage />;
-      case 'analysis':
-        return <AnalysisPage />;
-      default:
-        return <MainPage />;
-    }
-  };
-
   return (
     <Box
       sx={{
@@ -203,7 +199,17 @@ const AppContent = () => {
 
       {/* Main Content Area */}
       <Box component="main" sx={{ flex: 1, pb: { xs: 8, md: 4 } }}>
-        {renderCurrentPage()}
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/analysis/:id" element={<DetailedAnalysisPage />} />
+          <Route path="/trends" element={<TrendsPage />} />
+          <Route path="/compare" element={<ComparisonPage />} />
+          <Route path="/jobs/:id" element={<JobDetailPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/learning-paths" element={<LearningPathsPage />} />
+          {/* 추후 추가될 라우트들 */}
+        </Routes>
       </Box>
 
       {/* Global Styles */}
@@ -318,9 +324,11 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
+      <Router>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </Router>
     </ThemeProvider>
   );
 };

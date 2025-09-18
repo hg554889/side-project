@@ -18,7 +18,7 @@ const analysisRoutes = require('./routes/analysis');
 const adminRoutes = require('./routes/admin');
 
 // Import database connection
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/Database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,7 +142,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Catch-all handler: send back React's index.html file for client-side routing
-app.get('*', (req, res) => {
+app.use((req, res, next) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API endpoint not found' });
