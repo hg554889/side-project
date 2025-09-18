@@ -15,8 +15,8 @@ import { Card, CardContent, Typography, Box } from '@mui/material';
 const SkillDemandChart = ({ data = [], title = "스킬 요구도 분석" }) => {
   // 색상 팔레트
   const colors = [
-    '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff7f',
-    '#dc143c', '#00bfff', '#ff69b4', '#32cd32', '#ff6347'
+    '#2563eb', '#059669', '#f59e0b', '#ef4444', '#7c3aed',
+    '#06b6d4', '#84cc16', '#f97316', '#dc2626', '#0ea5e9'
   ];
 
   // 커스텀 툴팁
@@ -26,13 +26,13 @@ const SkillDemandChart = ({ data = [], title = "스킬 요구도 분석" }) => {
         <Box
           sx={{
             backgroundColor: 'white',
-            border: '1px solid #ccc',
+            border: '1px solid #e2e8f0',
             borderRadius: 2,
-            p: 2,
-            boxShadow: 2,
+            p: 1.5,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: '#0f172a' }}>
             {label}
           </Typography>
           {payload.map((entry, index) => (
@@ -52,7 +52,7 @@ const SkillDemandChart = ({ data = [], title = "스킬 요구도 분석" }) => {
 
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent>
+      <CardContent sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           {title}
         </Typography>
@@ -61,25 +61,26 @@ const SkillDemandChart = ({ data = [], title = "스킬 요구도 분석" }) => {
             <BarChart
               data={data}
               margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 5,
+                top: 12,
+                right: 16,
+                left: 8,
+                bottom: 8,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: '#475569' }}
                 angle={-45}
                 textAnchor="end"
                 height={60}
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: '#475569' }}
                 label={{ value: '요구도 (%)', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="percentage" radius={[4, 4, 0, 0]}>
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />

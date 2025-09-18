@@ -21,13 +21,13 @@ const SalaryTrendChart = ({ data = [], title = "연봉 트렌드 분석", type =
         <Box
           sx={{
             backgroundColor: 'white',
-            border: '1px solid #ccc',
+            border: '1px solid #e2e8f0',
             borderRadius: 2,
-            p: 2,
-            boxShadow: 2,
+            p: 1.5,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: '#0f172a' }}>
             {label}
           </Typography>
           {payload.map((entry, index) => (
@@ -52,44 +52,44 @@ const SalaryTrendChart = ({ data = [], title = "연봉 트렌드 분석", type =
         <AreaChart
           data={data}
           margin={{
-            top: 20,
-            right: 30,
-            left: 20,
-            bottom: 5,
+            top: 12,
+            right: 16,
+            left: 8,
+            bottom: 8,
           }}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#475569' }} />
           <YAxis
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 12, fill: '#475569' }}
             label={{ value: '연봉 (만원)', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
           <Area
             type="monotone"
             dataKey="min"
             stackId="1"
-            stroke="#8884d8"
-            fill="#8884d8"
-            fillOpacity={0.6}
+            stroke="#2563eb"
+            fill="#2563eb"
+            fillOpacity={0.15}
             name="최소 연봉"
           />
           <Area
             type="monotone"
             dataKey="max"
             stackId="1"
-            stroke="#82ca9d"
-            fill="#82ca9d"
-            fillOpacity={0.6}
+            stroke="#059669"
+            fill="#059669"
+            fillOpacity={0.15}
             name="최대 연봉"
           />
           <Line
             type="monotone"
             dataKey="avg"
-            stroke="#ff7300"
+            stroke="#f59e0b"
             strokeWidth={3}
-            dot={{ fill: '#ff7300', strokeWidth: 2, r: 4 }}
+            dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
             name="평균 연봉"
           />
         </AreaChart>
@@ -100,42 +100,42 @@ const SalaryTrendChart = ({ data = [], title = "연봉 트렌드 분석", type =
       <LineChart
         data={data}
         margin={{
-          top: 20,
-          right: 30,
-          left: 20,
-          bottom: 5,
+          top: 12,
+          right: 16,
+          left: 8,
+          bottom: 8,
         }}
       >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#475569' }} />
         <YAxis
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: '#475569' }}
           label={{ value: '연봉 (만원)', angle: -90, position: 'insideLeft' }}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
         <Line
           type="monotone"
           dataKey="min"
-          stroke="#8884d8"
+          stroke="#2563eb"
           strokeWidth={2}
-          dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#2563eb', strokeWidth: 2, r: 3 }}
           name="최소 연봉"
         />
         <Line
           type="monotone"
           dataKey="avg"
-          stroke="#82ca9d"
+          stroke="#059669"
           strokeWidth={3}
-          dot={{ fill: '#82ca9d', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#059669', strokeWidth: 2, r: 3 }}
           name="평균 연봉"
         />
         <Line
           type="monotone"
           dataKey="max"
-          stroke="#ff7300"
+          stroke="#f59e0b"
           strokeWidth={2}
-          dot={{ fill: '#ff7300', strokeWidth: 2, r: 4 }}
+          dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
           name="최대 연봉"
         />
       </LineChart>
@@ -144,8 +144,8 @@ const SalaryTrendChart = ({ data = [], title = "연봉 트렌드 분석", type =
 
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#0f172a' }}>
           {title}
         </Typography>
         <Box sx={{ width: '100%', height: 300 }}>

@@ -93,9 +93,10 @@ const SearchSection = () => {
           onChange={handleSearchChange}
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
+          inputProps={{ 'aria-label': '채용공고 검색어 입력' }}
           InputProps={{
             startAdornment: (
-              <InputAdornment position="start">
+              <InputAdornment position="start" aria-hidden>
                 <SearchIcon
                   sx={{
                     fontSize: 24,
@@ -109,6 +110,7 @@ const SearchSection = () => {
                 <Button
                   size="small"
                   onClick={() => actions.setSearchQuery('')}
+                  aria-label="검색어 지우기"
                   sx={{
                     minWidth: 'auto',
                     p: 1,
@@ -130,17 +132,17 @@ const SearchSection = () => {
               fontSize: '16px',
               fontWeight: 500,
               minHeight: '56px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border-color)',
               transition: 'all 0.2s ease',
               boxShadow: searchFocused
-                ? '0 0 0 4px rgba(37, 99, 235, 0.1)'
+                ? '0 0 0 4px rgba(37, 99, 235, 0.10)'
                 : 'none',
               '&:hover': {
                 borderColor: '#cbd5e1',
               },
               '&.Mui-focused': {
-                borderColor: '#2563eb',
-                boxShadow: '0 0 0 4px rgba(37, 99, 235, 0.1)',
+                borderColor: 'var(--primary-color)',
+                boxShadow: '0 0 0 4px rgba(37, 99, 235, 0.10)',
                 '& .MuiOutlinedInput-notchedOutline': {
                   border: 'none',
                 },
@@ -182,10 +184,11 @@ const SearchSection = () => {
                   state.searchQuery === keyword ? 'contained' : 'text'
                 }
                 onClick={() => actions.setSearchQuery(keyword)}
+                aria-label={`${keyword}로 검색`}
                 sx={{
                   borderRadius: 2,
                   color: state.searchQuery === keyword ? 'white' : '#64748b',
-                  backgroundColor: state.searchQuery === keyword ? '#2563eb' : 'transparent',
+                  backgroundColor: state.searchQuery === keyword ? 'var(--primary-color)' : 'transparent',
                   fontWeight: 500,
                   fontSize: '14px',
                   px: 2,
@@ -226,6 +229,8 @@ const SearchSection = () => {
             variant="text"
             endIcon={filterExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             onClick={() => setFilterExpanded(!filterExpanded)}
+            aria-expanded={filterExpanded}
+            aria-controls="filters-panel"
             sx={{
               color: '#64748b',
               fontWeight: 500,
@@ -299,13 +304,13 @@ const SearchSection = () => {
         )}
 
         {/* Detailed Filter Options */}
-        <Collapse in={filterExpanded}>
+        <Collapse in={filterExpanded} id="filters-panel">
           <Box
             sx={{
               p: 4,
               backgroundColor: '#f8fafc',
               borderRadius: 3,
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border-color)',
             }}
           >
             <Grid container spacing={4}>
@@ -332,42 +337,51 @@ const SearchSection = () => {
                     현재 본인의 경험 수준을 선택하세요
                   </Typography>
                   <FormControl fullWidth>
+                    <InputLabel id="search-experience-label" shrink>
+                      경험 수준
+                    </InputLabel>
                     <Select
+                      labelId="search-experience-label"
                       value={state.filters.experience}
+                      label="경험 수준"
                       onChange={(e) =>
                         handleFilterChange('experience', e.target.value)
                       }
                       displayEmpty
+                      renderValue={(value) =>
+                        value ? value : <span style={{ color: '#94a3b8' }}>전체 수준</span>
+                      }
+                      inputProps={{ 'aria-label': '경험 수준 선택' }}
                       sx={{
-                        minHeight: '64px',
+                        minHeight: '56px',
                         backgroundColor: 'white',
                         '& .MuiSelect-select': {
-                          padding: '20px 16px',
+                          padding: '14px 12px',
                           fontSize: '16px',
                           fontWeight: 500,
                           display: 'flex',
                           alignItems: 'center',
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
-                          border: '2px solid #e2e8f0',
+                          border: '1px solid var(--border-color)',
                           borderRadius: 3,
                         },
                         '&:hover .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#cbd5e1',
                         },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#2563eb',
-                          borderWidth: '2px',
+                          borderColor: 'var(--primary-color)',
+                          borderWidth: '1px',
                         },
                       }}
                     >
-                      <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                         <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                           경험 수준을 선택하세요
                         </Typography>
                       </MenuItem>
                       {filterOptions.experienceLevel.map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 2, fontSize: '16px' }}>
+                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                               {option.label}
@@ -408,42 +422,51 @@ const SearchSection = () => {
                     원하는 근무 지역을 선택하세요
                   </Typography>
                   <FormControl fullWidth>
+                    <InputLabel id="search-region-label" shrink>
+                      근무 지역
+                    </InputLabel>
                     <Select
+                      labelId="search-region-label"
                       value={state.filters.region}
+                      label="근무 지역"
                       onChange={(e) =>
                         handleFilterChange('region', e.target.value)
                       }
                       displayEmpty
+                      renderValue={(value) =>
+                        value ? value : <span style={{ color: '#94a3b8' }}>전체 지역</span>
+                      }
+                      inputProps={{ 'aria-label': '근무 지역 선택' }}
                       sx={{
-                        minHeight: '64px',
+                        minHeight: '56px',
                         backgroundColor: 'white',
                         '& .MuiSelect-select': {
-                          padding: '20px 16px',
+                          padding: '14px 12px',
                           fontSize: '16px',
                           fontWeight: 500,
                           display: 'flex',
                           alignItems: 'center',
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
-                          border: '2px solid #e2e8f0',
+                          border: '1px solid var(--border-color)',
                           borderRadius: 3,
                         },
                         '&:hover .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#cbd5e1',
                         },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#2563eb',
-                          borderWidth: '2px',
+                          borderColor: 'var(--primary-color)',
+                          borderWidth: '1px',
                         },
                       }}
                     >
-                      <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                         <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                           지역을 선택하세요
                         </Typography>
                       </MenuItem>
                       {filterOptions.region.map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 2, fontSize: '16px' }}>
+                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>
                             {option.label}
                           </Typography>
@@ -477,42 +500,51 @@ const SearchSection = () => {
                     원하는 기업 규모를 선택하세요
                   </Typography>
                   <FormControl fullWidth>
+                    <InputLabel id="search-company-size-label" shrink>
+                      기업 규모
+                    </InputLabel>
                     <Select
+                      labelId="search-company-size-label"
                       value={state.filters.companySize}
+                      label="기업 규모"
                       onChange={(e) =>
                         handleFilterChange('companySize', e.target.value)
                       }
                       displayEmpty
+                      renderValue={(value) =>
+                        value ? value : <span style={{ color: '#94a3b8' }}>전체 규모</span>
+                      }
+                      inputProps={{ 'aria-label': '기업 규모 선택' }}
                       sx={{
-                        minHeight: '64px',
+                        minHeight: '56px',
                         backgroundColor: 'white',
                         '& .MuiSelect-select': {
-                          padding: '20px 16px',
+                          padding: '14px 12px',
                           fontSize: '16px',
                           fontWeight: 500,
                           display: 'flex',
                           alignItems: 'center',
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
-                          border: '2px solid #e2e8f0',
+                          border: '1px solid var(--border-color)',
                           borderRadius: 3,
                         },
                         '&:hover .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#cbd5e1',
                         },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#2563eb',
-                          borderWidth: '2px',
+                          borderColor: 'var(--primary-color)',
+                          borderWidth: '1px',
                         },
                       }}
                     >
-                      <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                         <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                           기업 규모를 선택하세요
                         </Typography>
                       </MenuItem>
                       {filterOptions.companySize.map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 2, fontSize: '16px' }}>
+                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                               {option.label}
@@ -554,7 +586,7 @@ const SearchSection = () => {
                 variant="contained"
                 onClick={() => setFilterExpanded(false)}
                 sx={{
-                  backgroundColor: '#2563eb',
+                  backgroundColor: 'var(--primary-color)',
                   fontWeight: 600,
                   borderRadius: 2,
                   boxShadow: 'none',

@@ -7,19 +7,36 @@ import {
   Typography,
   Button,
   Box,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
-import { Work as WorkIcon } from '@mui/icons-material';
+import { Work as WorkIcon, Menu as MenuIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 
 const Header = () => {
   const { actions } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const navItems = [
+    { label: '홈', path: '/' },
+    { label: '분석', path: '/analysis' },
+    { label: '트렌드', path: '/trends' },
+    { label: '비교', path: '/compare' },
+  ];
 
   const handleNavigate = (path) => {
     navigate(path);
     actions.clearError();
+    setMobileOpen(false);
   };
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <AppBar
@@ -46,10 +63,11 @@ const Header = () => {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                backgroundColor: '#2563eb',
+                backgroundColor: 'var(--primary-color)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: '0 6px 16px rgba(37,99,235,0.25)'
               }}
             >
               <WorkIcon sx={{ fontSize: 24, color: 'white' }} />
@@ -66,103 +84,92 @@ const Header = () => {
             </Typography>
           </Box>
 
-          {/* Navigation */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant={location.pathname === '/' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('/')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                fontSize: '15px',
-                backgroundColor:
-                  location.pathname === '/' ? '#2563eb' : 'transparent',
-                color: location.pathname === '/' ? 'white' : '#64748b',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor:
-                    location.pathname === '/' ? '#1d4ed8' : '#f1f5f9',
+          {/* Desktop Navigation */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
+            {navItems.map((item) => (
+              <Button
+                key={item.path}
+                variant={isActive(item.path) ? 'contained' : 'text'}
+                onClick={() => handleNavigate(item.path)}
+                sx={{
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1.5,
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  backgroundColor: isActive(item.path) ? 'var(--primary-color)' : 'transparent',
+                  color: isActive(item.path) ? 'white' : '#64748b',
                   boxShadow: 'none',
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              홈
-            </Button>
-            <Button
-              variant={location.pathname === '/analysis' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('/analysis')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                fontSize: '15px',
-                backgroundColor:
-                  location.pathname === '/analysis' ? '#2563eb' : 'transparent',
-                color: location.pathname === '/analysis' ? 'white' : '#64748b',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor:
-                    location.pathname === '/analysis' ? '#1d4ed8' : '#f1f5f9',
-                  boxShadow: 'none',
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              분석
-            </Button>
-            <Button
-              variant={location.pathname === '/trends' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('/trends')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                fontSize: '15px',
-                backgroundColor:
-                  location.pathname === '/trends' ? '#2563eb' : 'transparent',
-                color: location.pathname === '/trends' ? 'white' : '#64748b',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor:
-                    location.pathname === '/trends' ? '#1d4ed8' : '#f1f5f9',
-                  boxShadow: 'none',
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              트렌드
-            </Button>
-            <Button
-              variant={location.pathname === '/compare' ? 'contained' : 'text'}
-              onClick={() => handleNavigate('/compare')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                fontSize: '15px',
-                backgroundColor:
-                  location.pathname === '/compare' ? '#2563eb' : 'transparent',
-                color: location.pathname === '/compare' ? 'white' : '#64748b',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor:
-                    location.pathname === '/compare' ? '#1d4ed8' : '#f1f5f9',
-                  boxShadow: 'none',
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              비교
-            </Button>
+                  '&:hover': {
+                    backgroundColor: isActive(item.path) ? '#1d4ed8' : '#f1f5f9',
+                    boxShadow: 'none',
+                  },
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
           </Box>
+
+          {/* Mobile menu button */}
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={() => setMobileOpen(true)}
+            sx={{ display: { xs: 'flex', md: 'none' }, color: '#64748b' }}
+            aria-label="메뉴 열기"
+          >
+            <MenuIcon />
+          </IconButton>
         </Toolbar>
       </Container>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="right"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 260,
+            borderLeft: '1px solid #e2e8f0',
+          }
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <WorkIcon sx={{ color: 'var(--primary-color)' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              SkillMap
+            </Typography>
+          </Box>
+          <List>
+            {navItems.map((item) => (
+              <ListItem key={item.path} disablePadding>
+                <ListItemButton
+                  selected={isActive(item.path)}
+                  onClick={() => handleNavigate(item.path)}
+                  sx={{
+                    borderRadius: 1,
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(37,99,235,0.08)'
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontWeight: isActive(item.path) ? 700 : 500,
+                      color: isActive(item.path) ? 'var(--primary-color)' : '#334155'
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
     </AppBar>
   );
 };

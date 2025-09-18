@@ -98,7 +98,7 @@ const TrendsPage = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
         <Skeleton variant="rectangular" width="100%" height={60} sx={{ mb: 3 }} />
         <Grid container spacing={3}>
           {[1, 2, 3, 4, 5, 6].map((item) => (
@@ -113,7 +113,7 @@ const TrendsPage = () => {
 
   if (error) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
@@ -125,7 +125,7 @@ const TrendsPage = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
@@ -137,7 +137,7 @@ const TrendsPage = () => {
 
         {/* Market Overview Cards */}
         {marketOverview && (
-          <Grid container spacing={2} sx={{ mb: 4 }}>
+          <Grid container spacing={2} sx={{ mb: 4 }} justifyContent="center">
             <Grid item xs={12} sm={6} md={3}>
               <Card sx={{ textAlign: 'center', p: 2 }}>
                 <Typography variant="h4" color="primary" sx={{ fontWeight: 700 }}>
@@ -189,6 +189,7 @@ const TrendsPage = () => {
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
+          sx={{ '.MuiTabs-flexContainer': { justifyContent: 'center' } }}
         >
           <Tab
             label="인기 스킬"

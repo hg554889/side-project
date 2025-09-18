@@ -80,7 +80,7 @@ const ResultsSection = () => {
     <Card
       elevation={0}
       sx={{
-        border: '2px solid #333',
+        border: '1px solid var(--border-color)',
         borderRadius: 3,
         textAlign: 'center',
         py: 8,
@@ -167,13 +167,13 @@ const ResultsSection = () => {
       <Card
         elevation={0}
         sx={{
-          border: '2px solid #e3f2fd',
+          border: '1px solid #e3f2fd',
           borderRadius: 2,
           backgroundColor: '#f8fffe',
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: '#1976d2',
-            boxShadow: '0 4px 12px rgba(25,118,210,0.1)',
+            borderColor: 'var(--primary-color)',
+            boxShadow: '0 6px 18px rgba(25,118,210,0.12)',
           },
         }}
       >
@@ -294,7 +294,7 @@ const ResultsSection = () => {
     <Card
       elevation={0}
       sx={{
-        border: '2px solid #333',
+        border: '1px solid var(--border-color)',
         borderRadius: 3,
       }}
     >
@@ -337,7 +337,7 @@ const ResultsSection = () => {
         <Divider
           sx={{
             mb: 4,
-            borderColor: '#333',
+            borderColor: 'var(--border-color)',
             borderWidth: '1px',
           }}
         />
@@ -362,14 +362,14 @@ const ResultsSection = () => {
             variant="outlined"
             startIcon={<SchoolIcon />}
             sx={{
-              border: '2px solid #333',
+              border: '1px solid var(--border-color)',
               borderRadius: '25px',
               color: '#333',
               fontWeight: 600,
               px: 3,
               py: 1,
               '&:hover': {
-                backgroundColor: '#f5f5f5',
+                backgroundColor: '#f5f7fb',
                 transform: 'translateY(-1px)',
               },
             }}
@@ -381,8 +381,8 @@ const ResultsSection = () => {
             startIcon={<AssessmentIcon />}
             onClick={() => navigate(`/analysis/${Date.now()}`)}
             sx={{
-              backgroundColor: '#1976d2',
-              border: '2px solid #333',
+              backgroundColor: 'var(--primary-color)',
+              border: '1px solid var(--border-color)',
               borderRadius: '25px',
               fontWeight: 600,
               px: 3,
@@ -400,7 +400,7 @@ const ResultsSection = () => {
             startIcon={<ExpandMoreIcon />}
             color="secondary"
             sx={{
-              border: '2px solid #4caf50',
+              border: '1px solid #4caf50',
               borderRadius: '25px',
               color: '#2e7d32',
               fontWeight: 600,

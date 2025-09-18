@@ -55,7 +55,7 @@ const DetailedAnalysisPage = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
         <Skeleton variant="rectangular" width="100%" height={60} sx={{ mb: 3 }} />
         <Grid container spacing={3}>
           {[1, 2, 3, 4].map((item) => (
@@ -70,7 +70,7 @@ const DetailedAnalysisPage = () => {
 
   if (error) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
@@ -86,7 +86,7 @@ const DetailedAnalysisPage = () => {
 
   if (!analysisData) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
         <Alert severity="warning" sx={{ mb: 3 }}>
           분석 결과를 찾을 수 없습니다.
         </Alert>
@@ -108,7 +108,7 @@ const DetailedAnalysisPage = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
         <IconButton

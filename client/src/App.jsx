@@ -194,11 +194,14 @@ const AppContent = () => {
         flexDirection: 'column',
       }}
     >
+      {/* Skip to content for keyboard users */}
+      <a href="#main" className="skip-link">본문으로 건너뛰기</a>
+
       {/* Global Header */}
       <Header />
 
       {/* Main Content Area */}
-      <Box component="main" sx={{ flex: 1, pb: { xs: 8, md: 4 } }}>
+      <Box component="main" id="main" role="main" aria-label="메인 콘텐츠" sx={{ flex: 1, pb: { xs: 8, md: 4 } }}>
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />

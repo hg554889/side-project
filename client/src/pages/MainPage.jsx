@@ -72,7 +72,7 @@ const MainPage = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
       {/* Hero Section - Toss Style */}
       <Box
         sx={{

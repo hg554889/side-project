@@ -231,7 +231,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
               />
             )}
           </Box>
-          <IconButton onClick={onClose}>
+          <IconButton onClick={onClose} aria-label="닫기">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -239,7 +239,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
         <DialogContent dividers sx={{ p: 0 }}>
           {/* 저장된 검색 */}
           <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="saved-searches" id="saved-searches-header">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <HistoryIcon color="action" />
                 <Typography>저장된 검색 ({savedSearches.length})</Typography>
@@ -255,12 +255,14 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                         cursor: 'pointer',
                         border: '1px solid',
                         borderColor: 'divider',
+                        borderRadius: 2,
                         '&:hover': {
                           borderColor: 'primary.main',
                           bgcolor: 'action.hover',
                         }
                       }}
                       onClick={() => loadSavedSearch(search)}
+                      aria-label={`${search.name} 검색 불러오기`}
                     >
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -272,6 +274,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                             e.stopPropagation();
                             deleteSavedSearch(search.id);
                           }}
+                          aria-label="저장된 검색 삭제"
                         >
                           <CloseIcon fontSize="small" />
                         </IconButton>
@@ -293,7 +296,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
 
           {/* 기본 검색 */}
           <Accordion defaultExpanded>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="basic-search" id="basic-search-header">
               <Typography>기본 검색</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -323,6 +326,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.jobCategory}
                       label="직군"
                       onChange={(e) => updateFilter('jobCategory', e.target.value)}
+                      inputProps={{ 'aria-label': '직군 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.jobCategories.map((category) => (
@@ -340,6 +345,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.experienceLevel}
                       label="경험수준"
                       onChange={(e) => updateFilter('experienceLevel', e.target.value)}
+                      inputProps={{ 'aria-label': '경험수준 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.experienceLevels.map((level) => (
@@ -357,6 +364,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.region}
                       label="지역"
                       onChange={(e) => updateFilter('region', e.target.value)}
+                      inputProps={{ 'aria-label': '지역 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.regions.map((region) => (
@@ -373,7 +382,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
 
           {/* 회사 정보 */}
           <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="company-info" id="company-info-header">
               <Typography>회사 정보</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -394,6 +403,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.companySize}
                       label="회사 규모"
                       onChange={(e) => updateFilter('companySize', e.target.value)}
+                      inputProps={{ 'aria-label': '회사 규모 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.companySizes.map((size) => (
@@ -411,6 +422,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.industry}
                       label="업계"
                       onChange={(e) => updateFilter('industry', e.target.value)}
+                      inputProps={{ 'aria-label': '업계 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.industries.map((industry) => (
@@ -427,7 +440,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
 
           {/* 근무 조건 */}
           <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="work-conditions" id="work-conditions-header">
               <Typography>근무 조건</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -439,6 +452,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.workType}
                       label="근무 형태"
                       onChange={(e) => updateFilter('workType', e.target.value)}
+                      inputProps={{ 'aria-label': '근무 형태 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {OPTIONS.workTypes.map((type) => (
@@ -456,6 +471,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.postedWithin}
                       label="게시 기간"
                       onChange={(e) => updateFilter('postedWithin', e.target.value)}
+                      inputProps={{ 'aria-label': '게시 기간 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       {OPTIONS.postedWithinOptions.map((option) => (
                         <MenuItem key={option.value} value={option.value}>
@@ -546,7 +563,7 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
 
           {/* 정렬 옵션 */}
           <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="sort-options" id="sort-options-header">
               <Typography>정렬 및 기타 옵션</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -558,6 +575,8 @@ const AdvancedSearch = ({ open, onClose, onSearch, initialFilters = {} }) => {
                       value={filters.sortBy}
                       label="정렬 기준"
                       onChange={(e) => updateFilter('sortBy', e.target.value)}
+                      inputProps={{ 'aria-label': '정렬 기준 선택' }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
                     >
                       {OPTIONS.sortOptions.map((option) => (
                         <MenuItem key={option.value} value={option.value}>

@@ -58,20 +58,16 @@ const CompanyCard = ({ company, onClick }) => {
       elevation={0}
       sx={{
         height: 200,
-        border: '2px solid #333',
+        border: '1px solid var(--border-color)',
         borderRadius: 2,
         cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        transform: hovered
-          ? 'translateY(-4px) scale(1.02)'
-          : 'translateY(0) scale(1)',
-        borderColor: hovered ? '#1976d2' : '#333',
-        boxShadow: hovered
-          ? '0 8px 24px rgba(25,118,210,0.25)'
-          : '0 2px 4px rgba(0,0,0,0.05)',
+        transition: 'all 0.25s ease',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        borderColor: hovered ? 'var(--primary-color)' : 'var(--border-color)',
+        boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.08)' : '0 2px 6px rgba(0,0,0,0.04)',
         backgroundColor: 'white',
         '&:hover': {
-          borderColor: '#1976d2',
+          borderColor: 'var(--primary-color)',
         },
         position: 'relative',
         overflow: 'hidden',
@@ -120,6 +116,7 @@ const CompanyCard = ({ company, onClick }) => {
                 height: 24,
                 bgcolor: getCompanySizeColor(company.companySize),
                 fontSize: '12px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
               }}
             >
               <BusinessIcon sx={{ fontSize: 14 }} />
@@ -169,15 +166,15 @@ const CompanyCard = ({ company, onClick }) => {
                 size="small"
                 variant="outlined"
                 sx={{
-                  border: '1.5px solid #1976d2',
-                  color: '#1976d2',
+                  border: '1px solid var(--primary-color)',
+                  color: 'var(--primary-color)',
                   fontSize: '11px',
                   fontWeight: 500,
                   height: '24px',
-                  backgroundColor: hovered ? '#e3f2fd' : 'white',
+                  backgroundColor: hovered ? '#eaf3ff' : 'white',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: '#e3f2fd',
+                    backgroundColor: '#eaf3ff',
                   },
                 }}
               />
@@ -225,11 +222,11 @@ const CompanyCard = ({ company, onClick }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <SalaryIcon sx={{ fontSize: 14, color: '#4caf50' }} />
+            <SalaryIcon sx={{ fontSize: 14, color: 'var(--secondary-color)' }} />
             <Typography
               variant="caption"
               sx={{
-                color: '#4caf50',
+                color: 'var(--secondary-color)',
                 fontSize: '11px',
                 fontWeight: 600,
               }}
@@ -249,7 +246,7 @@ const CompanyCard = ({ company, onClick }) => {
               right: 0,
               bottom: 0,
               background:
-                'linear-gradient(45deg, rgba(25,118,210,0.02) 0%, rgba(25,118,210,0.05) 100%)',
+                'linear-gradient(45deg, rgba(25,118,210,0.03) 0%, rgba(25,118,210,0.06) 100%)',
               pointerEvents: 'none',
               borderRadius: 1,
             }}

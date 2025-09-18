@@ -30,6 +30,7 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
+  ListItemSecondaryAction,
 } from '@mui/material';
 import {
   Compare as CompareIcon,
@@ -214,7 +215,7 @@ const ComparisonPage = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, px: { xs: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 2 }}>

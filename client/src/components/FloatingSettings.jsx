@@ -235,24 +235,32 @@ const FloatingSettings = ({
                   분석하고 싶은 직군을 선택하세요
                 </Typography>
                 <FormControl fullWidth>
+                  <InputLabel id="jobCategory-label" shrink>
+                    직군
+                  </InputLabel>
                   <Select
+                    labelId="jobCategory-label"
                     value={state.analysisSettings.jobCategory}
+                    label="직군"
                     onChange={(e) =>
                       handleSettingChange('jobCategory', e.target.value)
                     }
                     displayEmpty
+                    renderValue={(value) =>
+                      value ? value : <span style={{ color: '#94a3b8' }}>전체 직군</span>
+                    }
                     sx={{
-                      minHeight: '64px',
+                      minHeight: '56px',
                       backgroundColor: 'white',
                       '& .MuiSelect-select': {
-                        padding: '20px 16px',
+                        padding: '14px 12px',
                         fontSize: '16px',
                         fontWeight: 500,
                         display: 'flex',
                         alignItems: 'center',
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
-                        border: '2px solid #e2e8f0',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 3,
                       },
                       '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -260,17 +268,17 @@ const FloatingSettings = ({
                       },
                       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#2563eb',
-                        borderWidth: '2px',
+                        borderWidth: '1px',
                       },
                     }}
                   >
-                    <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                    <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                       <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                         직군을 선택하세요
                       </Typography>
                     </MenuItem>
                     {Object.keys(jobCategories).map((category) => (
-                      <MenuItem key={category} value={category} sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem key={category} value={category} sx={{ py: 1.5, fontSize: '16px' }}>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                             {category}
@@ -309,24 +317,32 @@ const FloatingSettings = ({
                   현재 본인의 경험 수준을 선택하세요
                 </Typography>
                 <FormControl fullWidth>
+                  <InputLabel id="experienceLevel-label" shrink>
+                    경험 수준
+                  </InputLabel>
                   <Select
+                    labelId="experienceLevel-label"
                     value={state.analysisSettings.experienceLevel}
+                    label="경험 수준"
                     onChange={(e) =>
                       handleSettingChange('experienceLevel', e.target.value)
                     }
                     displayEmpty
+                    renderValue={(value) =>
+                      value ? value : <span style={{ color: '#94a3b8' }}>전체 수준</span>
+                    }
                     sx={{
-                      minHeight: '64px',
+                      minHeight: '56px',
                       backgroundColor: 'white',
                       '& .MuiSelect-select': {
-                        padding: '20px 16px',
+                        padding: '14px 12px',
                         fontSize: '16px',
                         fontWeight: 500,
                         display: 'flex',
                         alignItems: 'center',
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
-                        border: '2px solid #e2e8f0',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 3,
                       },
                       '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -334,11 +350,11 @@ const FloatingSettings = ({
                       },
                       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#2563eb',
-                        borderWidth: '2px',
+                        borderWidth: '1px',
                       },
                     }}
                   >
-                    <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                    <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                       <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                         경험 수준을 선택하세요
                       </Typography>
@@ -346,7 +362,7 @@ const FloatingSettings = ({
                     {filterOptions.experienceLevel
                       .filter((opt) => opt.value)
                       .map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 2, fontSize: '16px' }}>
+                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                               {option.label}
@@ -387,25 +403,33 @@ const FloatingSettings = ({
                   더 정확한 분석을 위해 선택하세요
                 </Typography>
                 <FormControl fullWidth>
+                  <InputLabel id="subCategory-label" shrink>
+                    세부직무
+                  </InputLabel>
                   <Select
+                    labelId="subCategory-label"
                     value={state.analysisSettings.subCategory}
+                    label="세부직무"
                     onChange={(e) =>
                       handleSettingChange('subCategory', e.target.value)
                     }
                     disabled={!state.analysisSettings.jobCategory}
                     displayEmpty
+                    renderValue={(value) =>
+                      value ? value : <span style={{ color: '#94a3b8' }}>전체 세부직무</span>
+                    }
                     sx={{
-                      minHeight: '64px',
+                      minHeight: '56px',
                       backgroundColor: state.analysisSettings.jobCategory ? 'white' : '#f9fafb',
                       '& .MuiSelect-select': {
-                        padding: '20px 16px',
+                        padding: '14px 12px',
                         fontSize: '16px',
                         fontWeight: 500,
                         display: 'flex',
                         alignItems: 'center',
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
-                        border: `2px solid ${!state.analysisSettings.jobCategory ? '#f3f4f6' : '#e2e8f0'}`,
+                        border: `1px solid ${!state.analysisSettings.jobCategory ? '#f3f4f6' : '#e2e8f0'}`,
                         borderRadius: 3,
                       },
                       '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -413,17 +437,17 @@ const FloatingSettings = ({
                       },
                       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#2563eb',
-                        borderWidth: '2px',
+                        borderWidth: '1px',
                       },
                     }}
                   >
-                    <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                    <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                       <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                         {state.analysisSettings.jobCategory ? '세부직무 선택' : '먼저 직군을 선택하세요'}
                       </Typography>
                     </MenuItem>
                     {getSubcategories().map((sub) => (
-                      <MenuItem key={sub} value={sub} sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem key={sub} value={sub} sx={{ py: 1.5, fontSize: '16px' }}>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                           {sub}
                         </Typography>
@@ -456,24 +480,32 @@ const FloatingSettings = ({
                   원하는 기업 규모를 선택하세요
                 </Typography>
                 <FormControl fullWidth>
+                  <InputLabel id="companySize-label" shrink>
+                    기업 규모
+                  </InputLabel>
                   <Select
+                    labelId="companySize-label"
                     value={state.analysisSettings.companySize}
+                    label="기업 규모"
                     onChange={(e) =>
                       handleSettingChange('companySize', e.target.value)
                     }
                     displayEmpty
+                    renderValue={(value) =>
+                      value ? value : <span style={{ color: '#94a3b8' }}>전체 규모</span>
+                    }
                     sx={{
-                      minHeight: '64px',
+                      minHeight: '56px',
                       backgroundColor: 'white',
                       '& .MuiSelect-select': {
-                        padding: '20px 16px',
+                        padding: '14px 12px',
                         fontSize: '16px',
                         fontWeight: 500,
                         display: 'flex',
                         alignItems: 'center',
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
-                        border: '2px solid #e2e8f0',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 3,
                       },
                       '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -481,17 +513,17 @@ const FloatingSettings = ({
                       },
                       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#2563eb',
-                        borderWidth: '2px',
+                        borderWidth: '1px',
                       },
                     }}
                   >
-                    <MenuItem value="" sx={{ py: 2, fontSize: '16px' }}>
+                    <MenuItem value="" sx={{ py: 1.5, fontSize: '16px' }}>
                       <Typography sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                         기업 규모를 선택하세요
                       </Typography>
                     </MenuItem>
                     {filterOptions.companySize.map((option) => (
-                      <MenuItem key={option.value} value={option.value} sx={{ py: 2, fontSize: '16px' }}>
+                      <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                             {option.label}

@@ -21,7 +21,7 @@ const MarketOverviewChart = ({
   showPie = true,
   showBar = true
 }) => {
-  const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  const colors = ['#2563eb', '#059669', '#f59e0b', '#ef4444', '#7c3aed'];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -29,13 +29,13 @@ const MarketOverviewChart = ({
         <Box
           sx={{
             backgroundColor: 'white',
-            border: '1px solid #ccc',
+            border: '1px solid #e2e8f0',
             borderRadius: 2,
-            p: 2,
-            boxShadow: 2,
+            p: 1.5,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: '#0f172a' }}>
             {label}
           </Typography>
           {payload.map((entry, index) => (
@@ -77,15 +77,15 @@ const MarketOverviewChart = ({
 
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#0f172a' }}>
           {title}
         </Typography>
 
         {showPie && showBar ? (
           <Grid container spacing={2} sx={{ height: 400 }}>
             <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, color: '#334155', fontWeight: 600 }}>
                 분야별 분포
               </Typography>
               <ResponsiveContainer width="100%" height="100%">
@@ -97,7 +97,7 @@ const MarketOverviewChart = ({
                     labelLine={false}
                     label={renderCustomizedLabel}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="#2563eb"
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
@@ -105,13 +105,13 @@ const MarketOverviewChart = ({
                     ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, color: '#334155', fontWeight: 600 }}>
                 성장률
               </Typography>
               <ResponsiveContainer width="100%" height="100%">
@@ -119,14 +119,15 @@ const MarketOverviewChart = ({
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 12, fill: '#475569' }}
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
-                  <YAxis tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#475569' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="growth" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="growth" fill="#059669" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Grid>
@@ -142,7 +143,7 @@ const MarketOverviewChart = ({
                   labelLine={false}
                   label={renderCustomizedLabel}
                   outerRadius={120}
-                  fill="#8884d8"
+                  fill="#2563eb"
                   dataKey="value"
                 >
                   {pieData.map((entry, index) => (
@@ -150,7 +151,7 @@ const MarketOverviewChart = ({
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           </Box>
@@ -161,17 +162,18 @@ const MarketOverviewChart = ({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: '#475569' }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: '#475569' }}
                   label={{ value: '채용공고 수', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]}>
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]}>
                   {barData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
