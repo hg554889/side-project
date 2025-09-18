@@ -59,6 +59,11 @@ const Header = () => {
           {/* Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
+              onClick={() => handleNavigate('/')}
+              role="button"
+              aria-label="홈으로 이동"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleNavigate('/'); }}
               sx={{
                 width: 40,
                 height: 40,
@@ -67,17 +72,20 @@ const Header = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 6px 16px rgba(37,99,235,0.25)'
+                boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
+                cursor: 'pointer'
               }}
             >
               <WorkIcon sx={{ fontSize: 24, color: 'white' }} />
             </Box>
             <Typography
               variant="h5"
+              onClick={() => handleNavigate('/')}
               sx={{
                 fontWeight: 700,
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
+                cursor: 'pointer'
               }}
             >
               SkillMap
