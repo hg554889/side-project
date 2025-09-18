@@ -1,8 +1,14 @@
 import asyncio
 import argparse
 import json
+import time
 from typing import Dict, List, Any
+from motor.motor_asyncio import AsyncIOMotorClient
 from crawlers.saramin_crawler import SaraminCrawler
+from crawlers.jobkorea_crawler import JobkoreaCrawler
+from crawlers.worknet_crawler import WorknetCrawler
+from crawlers.comento_crawler import ComentoCrawler
+from crawlers.securityfarm_crawler import SecurityfarmCrawler
 from processors.data_normalizer import DataNormalizer
 from database.mongo_client import mongo_client
 from utils.logger import setup_logger
@@ -11,75 +17,81 @@ logger = setup_logger()
 
 class CrawlingManager:
     def __init__(self):
-        self.crawlers = {
-            'saramin': SaraminCrawler(),
-            # 다른 크롤러들 추가 예정
-        }
+        self.crawlers = {}
         self.normalizer = DataNormalizer()
+        self._initialize_crawlers()
+        
+    def _initialize_crawlers(self):
+        """크롤러 초기화"""
+        try:
+            self.crawlers = {
+                'saramin': SaraminCrawler(),
+                'jobkorea': JobkoreaCrawler(),
+                'worknet': WorknetCrawler(),
+                'comento': ComentoCrawler(),
+                'securityfarm': SecurityfarmCrawler(),
+            }
+        except Exception as e:
+            logger.error(f"크롤러 초기화 실패: {e}")
+            raise
     
     async def crawl_all(self, options: Dict[str, Any]) -> Dict[str, Any]:
         """모든 사이트 크롤링"""
         logger.info("통합 크롤링 시작...")
+        results = self._init_results()
         
-        results = {
-            'sites': {},
-            'total': {
-                'crawled': 0,
-                'processed': 0,
-                'saved': 0,
-                'errors': 0
-            }
-        }
-        
-        sites = options.get('sites', ['saramin'])
-        
-        for site_name in sites:
-            if site_name not in self.crawlers:
-                logger.warning(f"지원하지 않는 사이트: {site_name}")
-                continue
+        try:
+            sites = options.get('sites', ['saramin'])
+            crawl_tasks = []
             
-            try:
-                logger.info(f"{site_name} 크롤링 시작...")
+            for site_name in sites:
+                if site_name not in self.crawlers:
+                    logger.warning(f"지원하지 않는 사이트: {site_name}")
+                    continue
                 
-                crawler = self.crawlers[site_name]
-                raw_jobs = await crawler.crawl(options)
-                
-                processed_jobs = []
-                for raw_job in raw_jobs:
-                    try:
-                        normalized_job = await self.normalizer.normalize(raw_job)
-                        if normalized_job.get('quality_score', 0) >= 0.5:
-                            processed_jobs.append(normalized_job)
-                    except Exception as e:
-                        logger.warning(f"데이터 처리 실패: {e}")
-                        results['total']['errors'] += 1
-                
-                # MongoDB에 저장
-                saved_count = await self.save_jobs(processed_jobs)
-                
-                site_result = {
-                    'crawled': len(raw_jobs),
-                    'processed': len(processed_jobs),
-                    'saved': saved_count
-                }
-                
-                results['sites'][site_name] = site_result
-                results['total']['crawled'] += len(raw_jobs)
-                results['total']['processed'] += len(processed_jobs)
-                results['total']['saved'] += saved_count
-                
-                logger.info(f"{site_name}: {saved_count}개 저장 완료")
-                
-            except Exception as e:
-                logger.error(f"{site_name} 크롤링 실패: {e}")
-                results['sites'][site_name] = {'error': str(e)}
-                results['total']['errors'] += 1
-        
-        logger.info(f"통합 크롤링 완료! 총 {results['total']['saved']}개 저장")
+                task = self._crawl_site(site_name, options, results)
+                crawl_tasks.append(task)
+            
+            await asyncio.gather(*crawl_tasks)
+            
+        except Exception as e:
+            logger.error(f"통합 크롤링 실패: {e}")
+        finally:
+            await self._cleanup_crawlers()
+            
         return results
     
+    async def _crawl_site(self, site_name: str, options: Dict, results: Dict):
+        """개별 사이트 크롤링"""
+        try:
+            crawler = self.crawlers[site_name]
+            raw_jobs = await crawler.crawl(options)
+            
+            processed_jobs = []
+            async for raw_job in asyncio.as_completed([
+                self.normalizer.normalize(job) for job in raw_jobs
+            ]):
+                try:
+                    if raw_job.get('quality_score', 0) >= 0.5:
+                        processed_jobs.append(raw_job)
+                except Exception as e:
+                    logger.warning(f"데이터 처리 실패: {e}")
+                    results['total']['errors'] += 1
+            
+            saved_count = await self.save_jobs(processed_jobs)
+            
+            self._update_results(results, site_name, {
+                'crawled': len(raw_jobs),
+                'processed': len(processed_jobs),
+                'saved': saved_count
+            })
+            
+        except Exception as e:
+            logger.error(f"{site_name} 크롤링 실패: {e}")
+            results['total']['errors'] += 1
+    
     async def save_jobs(self, jobs: List[Dict[str, Any]]) -> int:
-        """채용공고 MongoDB에 저장"""
+        """채용공고 MongoDB에 비동기 저장"""
         if not jobs:
             return 0
         
@@ -87,15 +99,10 @@ class CrawlingManager:
             collection = mongo_client.get_collection('job_postings')
             saved_count = 0
             
-            for job in jobs:
-                # Upsert (있으면 업데이트, 없으면 삽입)
-                result = collection.update_one(
-                    {'id': job['id']},
-                    {'$set': job},
-                    upsert=True
-                )
-                
-                if result.upserted_id or result.modified_count > 0:
+            async for job in asyncio.as_completed([
+                self._save_job(collection, job) for job in jobs
+            ]):
+                if job:
                     saved_count += 1
             
             return saved_count
@@ -104,6 +111,14 @@ class CrawlingManager:
             logger.error(f"MongoDB 저장 실패: {e}")
             return 0
     
+    async def _cleanup_crawlers(self):
+        """크롤러 정리"""
+        for crawler in self.crawlers.values():
+            try:
+                await crawler.close()
+            except Exception as e:
+                logger.warning(f"크롤러 정리 실패: {e}")
+
     async def get_system_health(self) -> Dict[str, Any]:
         """시스템 상태 확인"""
         try:
@@ -196,5 +211,4 @@ async def main():
         mongo_client.close()
 
 if __name__ == '__main__':
-    import time
     asyncio.run(main())

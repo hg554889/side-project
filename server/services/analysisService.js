@@ -118,13 +118,25 @@ class AnalysisService {
     } catch (error) {
       console.error('Error in performAnalysis:', error);
 
+      // 구체적인 에러 처리
       if (error.code === 'INSUFFICIENT_DATA') {
+        throw error;
+      } else if (error.message.includes('Memory usage exceeded')) {
+        const memError = new Error(
+          'Analysis failed due to resource constraints'
+        );
+        memError.code = 'RESOURCE_ERROR';
+        throw memError;
+      } else if (error.code === 'AI_SERVICE_ERROR') {
         throw error;
       }
 
-      const aiError = new Error('AI analysis service temporarily unavailable');
-      aiError.code = 'AI_SERVICE_ERROR';
-      throw aiError;
+      // 기타 에러
+      const genericError = new Error(
+        'Analysis service temporarily unavailable'
+      );
+      genericError.code = 'SERVICE_ERROR';
+      throw genericError;
     }
   }
 
@@ -134,7 +146,6 @@ class AnalysisService {
   async getCachedAnalysis(params) {
     try {
       const cacheKey = AnalysisResult.generateCacheKey(params);
-
       const cachedResult = await AnalysisResult.findOne({
         cacheKey,
         isActive: true,
@@ -142,25 +153,47 @@ class AnalysisService {
       }).lean();
 
       if (cachedResult) {
-        console.log(`Cache hit for analysis: ${cacheKey}`);
+        // 캐시 갱신 필요 여부 확인
+        const needsRefresh = await this._checkNeedsRefresh(cachedResult);
+        if (needsRefresh) {
+          // 백그라운드에서 캐시 갱신
+          this._refreshCacheInBackground(params, cachedResult.analysisId);
+        }
         return cachedResult;
       }
 
-      console.log(`Cache miss for analysis: ${cacheKey}`);
       return null;
     } catch (error) {
-      console.error('Error in getCachedAnalysis:', error);
-      return null; // Don't throw error, just proceed without cache
+      console.error('Cache retrieval error:', error);
+      return null;
     }
+  }
+
+  async _checkNeedsRefresh(cachedResult) {
+    const REFRESH_THRESHOLD = 12 * 60 * 60 * 1000; // 12시간
+    const age = Date.now() - cachedResult.analysisMetadata.analysisDate;
+    return age > REFRESH_THRESHOLD;
+  }
+
+  async _refreshCacheInBackground(params, analysisId) {
+    setTimeout(async () => {
+      try {
+        await this.performAnalysis(params);
+        console.log(`Cache refreshed for analysis: ${analysisId}`);
+      } catch (error) {
+        console.error(`Cache refresh failed for ${analysisId}:`, error);
+      }
+    }, 0);
   }
 
   /**
    * Get job data for analysis
    */
   async getJobDataForAnalysis(params) {
+    const BATCH_SIZE = 1000;
     const query = {
       isActive: true,
-      crawledAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }, // Last 90 days
+      crawledAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
     };
 
     if (params.jobCategory) query.jobCategory = params.jobCategory;
@@ -168,11 +201,42 @@ class AnalysisService {
     if (params.region) query.region = params.region;
     if (params.companySize) query.companySize = params.companySize;
 
-    return await JobPosting.find(query)
-      .select(
-        'jobTitle companyName keywords technicalSkills salaryMin salaryMax experienceLevel crawledAt'
-      )
-      .lean();
+    try {
+      let allJobs = [];
+      let lastId = null;
+
+      // 배치 처리로 메모리 사용량 최적화
+      while (true) {
+        const batchQuery = { ...query };
+        if (lastId) {
+          batchQuery._id = { $gt: lastId };
+        }
+
+        const batch = await JobPosting.find(batchQuery)
+          .select(
+            'jobTitle companyName keywords technicalSkills salaryMin salaryMax experienceLevel crawledAt'
+          )
+          .limit(BATCH_SIZE)
+          .sort({ _id: 1 })
+          .lean();
+
+        if (batch.length === 0) break;
+
+        allJobs = allJobs.concat(batch);
+        lastId = batch[batch.length - 1]._id;
+
+        // 메모리 사용량 모니터링
+        if (process.memoryUsage().heapUsed > 512 * 1024 * 1024) {
+          // 512MB
+          throw new Error('Memory usage exceeded limit');
+        }
+      }
+
+      return allJobs;
+    } catch (error) {
+      console.error('Error fetching job data:', error);
+      throw new Error('Failed to fetch job data for analysis');
+    }
   }
 
   /**

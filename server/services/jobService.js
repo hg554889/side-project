@@ -16,19 +16,23 @@ class JobService {
     try {
       const query = { isActive: true, ...filters };
       const sortObj = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
-
       const skip = (page - 1) * limit;
 
-      const [jobs, totalJobs] = await Promise.all([
-        JobPosting.find(query)
-          .sort(sortObj)
-          .skip(skip)
-          .limit(limit)
-          .select('-__v -updatedAt')
-          .lean(),
-        JobPosting.countDocuments(query),
-      ]);
+      // 메모리 효율을 위한 커서 사용
+      const cursor = JobPosting.find(query)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limit)
+        .select('-__v -updatedAt')
+        .lean()
+        .cursor();
 
+      const jobs = [];
+      for await (const doc of cursor) {
+        jobs.push(doc);
+      }
+
+      const totalJobs = await JobPosting.countDocuments(query);
       const totalPages = Math.ceil(totalJobs / limit);
 
       return {
@@ -40,9 +44,24 @@ class JobService {
         hasPrev: page > 1,
       };
     } catch (error) {
-      console.error('Error in getJobs:', error);
-      throw new Error('Failed to fetch jobs');
+      const errorMessage = this._handleError(error);
+      throw new Error(errorMessage);
     }
+  }
+
+  _handleError(error) {
+    // 구체적인 에러 처리
+    if (error.name === 'ValidationError') {
+      return `Invalid data format: ${error.message}`;
+    }
+    if (error.name === 'MongoServerError') {
+      if (error.code === 11000) {
+        return 'Duplicate entry found';
+      }
+      return `Database error: ${error.message}`;
+    }
+    console.error('Unexpected error:', error);
+    return 'An unexpected error occurred';
   }
 
   /**
@@ -358,51 +377,42 @@ class JobService {
    * Create multiple jobs (bulk insert for crawling)
    */
   async createJobsBulk(jobsData) {
+    const BATCH_SIZE = 100;
+    const results = {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      errors: [],
+    };
+
     try {
-      const results = {
-        created: 0,
-        updated: 0,
-        failed: 0,
-        errors: [],
-      };
+      // 배치 처리로 성능 개선
+      for (let i = 0; i < jobsData.length; i += BATCH_SIZE) {
+        const batch = jobsData.slice(i, i + BATCH_SIZE);
+        const operations = batch.map((job) => ({
+          updateOne: {
+            filter: {
+              companyName: job.companyName,
+              jobTitle: job.jobTitle,
+              'source.platform': job.source.platform,
+              'source.originalId': job.source.originalId,
+            },
+            update: {
+              $set: { ...job, updatedAt: new Date() },
+            },
+            upsert: true,
+          },
+        }));
 
-      for (const jobData of jobsData) {
-        try {
-          // Check if job already exists
-          const existingJob = await JobPosting.findOne({
-            companyName: jobData.companyName,
-            jobTitle: jobData.jobTitle,
-            'source.platform': jobData.source.platform,
-            'source.originalId': jobData.source.originalId,
-          });
-
-          if (existingJob) {
-            // Update existing job
-            await JobPosting.findByIdAndUpdate(existingJob._id, {
-              ...jobData,
-              updatedAt: new Date(),
-            });
-            results.updated++;
-          } else {
-            // Create new job
-            await JobPosting.create(jobData);
-            results.created++;
-          }
-        } catch (error) {
-          results.failed++;
-          results.errors.push({
-            jobTitle: jobData.jobTitle,
-            companyName: jobData.companyName,
-            error: error.message,
-          });
-        }
+        const result = await JobPosting.bulkWrite(operations);
+        results.created += result.upsertedCount;
+        results.updated += result.modifiedCount;
       }
 
-      console.log('Bulk job creation results:', results);
       return results;
     } catch (error) {
-      console.error('Error in createJobsBulk:', error);
-      throw new Error('Failed to create jobs in bulk');
+      console.error('Bulk operation error:', error);
+      throw new Error(`Bulk operation failed: ${error.message}`);
     }
   }
 

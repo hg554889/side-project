@@ -1,43 +1,30 @@
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
-from config.settings import settings
+from motor.motor_asyncio import AsyncIOMotorClient
 from utils.logger import setup_logger
 
-logger = setup_logger()
+logger = setup_logger("mongodb")
 
 class MongoDBClient:
-    _instance = None
-    _client = None
-    _db = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
+    def __init__(self):
+        self.client = None
+        self.db = None
+        self.connect()
+
     def connect(self):
-        if self._client is None:
-            try:
-                self._client = MongoClient(settings.MONGODB_URI)
-                self._db = self._client[settings.MONGODB_DB_NAME]
-                # 연결 테스트
-                self._client.admin.command('ping')
-                logger.info(f"MongoDB 연결 성공: {settings.MONGODB_DB_NAME}")
-            except ConnectionFailure as e:
-                logger.error(f"MongoDB 연결 실패: {e}")
-                raise
-        return self._db
-    
+        try:
+            # MongoDB 연결 설정
+            self.client = AsyncIOMotorClient('mongodb://localhost:27017')
+            self.db = self.client['skillmap']
+            logger.info("MongoDB 연결 성공")
+        except Exception as e:
+            logger.error(f"MongoDB 연결 실패: {e}")
+            raise
+
     def get_collection(self, collection_name):
-        db = self.connect()
-        return db[collection_name]
-    
+        return self.db[collection_name]
+
     def close(self):
-        if self._client:
-            self._client.close()
-            self._client = None
-            self._db = None
+        if self.client:
+            self.client.close()
             logger.info("MongoDB 연결 종료")
 
-# 싱글톤 인스턴스
 mongo_client = MongoDBClient()

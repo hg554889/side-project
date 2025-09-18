@@ -1,15 +1,21 @@
 from crawlers.base_crawler import BaseCrawler
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from config.sites_config import SITES_CONFIG
 from utils.logger import setup_logger
+import asyncio
 import time
+import random
 
-logger = setup_logger()
+logger = setup_logger("saramin_crawler")
 
 class SaraminCrawler(BaseCrawler):
     def __init__(self):
         super().__init__('saramin', SITES_CONFIG['saramin'])
+        self.base_url = SITES_CONFIG['saramin']['base_url']
+        self.selectors = SITES_CONFIG['saramin']['selectors']
     
     async def crawl(self, options=None):
         if options is None:
@@ -36,31 +42,36 @@ class SaraminCrawler(BaseCrawler):
             
             # URL 생성
             params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
-            url = f"{self.base_url}{self.config['search_path']}?{params_str}"
+            url = f"{self.base_url}{SITES_CONFIG['saramin']['search_path']}?{params_str}"
             
             logger.info(f"사람인 크롤링 시작: {url}")
             
-            self.driver.get(url)
+            # 비동기로 페이지 로드
+            await asyncio.to_thread(self.driver.get, url)
             
             # 채용공고 리스트 대기
-            job_list_element = self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
+            job_list_element = await self.wait_for_element(By.CSS_SELECTOR, self.selectors['job_list'])
             if not job_list_element:
                 logger.warning("채용공고 목록을 찾을 수 없습니다.")
                 return jobs
             
-            # 페이지 스크롤 (더 많은 공고 로드)
-            self.scroll_to_load_more(3)
+            # 페이지 스크롤
+            await self.scroll_page(3)
             
-            # 모든 채용공고 요소 찾기
-            job_elements = self.driver.find_elements(By.CSS_SELECTOR, self.selectors['job_list'])
+            # 채용공고 추출
+            job_elements = await asyncio.to_thread(
+                self.driver.find_elements, 
+                By.CSS_SELECTOR, 
+                self.selectors['job_list']
+            )
+            
             logger.info(f"사람인: {len(job_elements)}개 채용공고 발견")
             
             for i, element in enumerate(job_elements[:max_jobs]):
                 try:
-                    raw_data = self.extract_job_data(element)
+                    raw_data = await self.extract_job_data(element)
                     if raw_data and raw_data.get('title') and raw_data.get('company'):
-                        normalized_data = self.normalize_data(raw_data)
-                        jobs.append(normalized_data)
+                        jobs.append(raw_data)
                         logger.debug(f"사람인: {i+1}번째 공고 추출 완료 - {raw_data.get('title')}")
                     
                 except Exception as e:
@@ -75,62 +86,70 @@ class SaraminCrawler(BaseCrawler):
         
         finally:
             self.close_driver()
-            self.delay()
+            await self.delay()
         
         return jobs
     
-    def extract_job_data(self, element):
-        """개별 채용공고 데이터 추출"""
+    async def wait_for_element(self, by, selector, timeout=10):
+        """요소 대기"""
         try:
-            # 제목과 URL
-            title_elem = element.find_element(By.CSS_SELECTOR, self.selectors['title'])
-            title = title_elem.text.strip() if title_elem else ''
-            url = title_elem.get_attribute('href') if title_elem else ''
-            
-            # 회사명
-            company_elem = element.find_element(By.CSS_SELECTOR, self.selectors['company'])
-            company = company_elem.text.strip() if company_elem else ''
-            
-            # 위치, 경험, 급여 정보
-            condition_elements = element.find_elements(By.CSS_SELECTOR, '.job_condition span')
-            location = condition_elements[0].text.strip() if len(condition_elements) > 0 else ''
-            experience = condition_elements[1].text.strip() if len(condition_elements) > 1 else ''
-            salary = condition_elements[2].text.strip() if len(condition_elements) > 2 else ''
-            
-            # 마감일
-            try:
-                deadline_elem = element.find_element(By.CSS_SELECTOR, self.selectors['deadline'])
-                deadline = deadline_elem.text.strip() if deadline_elem else ''
-            except NoSuchElementException:
-                deadline = ''
-            
-            # 스킬 태그
-            try:
-                tag_elements = element.find_elements(By.CSS_SELECTOR, self.selectors['tags'])
-                tags = [tag.text.strip() for tag in tag_elements if tag.text.strip()]
-            except NoSuchElementException:
-                tags = []
-            
-            return {
-                'title': title,
-                'company': company,
-                'location': location,
-                'experience': experience,
-                'salary': salary,
-                'deadline': deadline,
-                'url': url,
-                'tags': tags
-            }
-            
-        except Exception as e:
-            logger.warning(f"사람인: 데이터 추출 실패 - {e}")
+            element = await asyncio.to_thread(
+                WebDriverWait(self.driver, timeout).until,
+                EC.presence_of_element_located((by, selector))
+            )
+            return element
+        except TimeoutException:
+            logger.warning(f"요소를 찾을 수 없음: {selector}")
             return None
     
-    def map_experience_level(self, level):
-        """경험 수준 매핑"""
-        mapping = {
-            '신입': '1',
-            '1-3년차': '2',
-            '경력무관': '0'
-        }
-        return mapping.get(level, '0')
+    async def scroll_page(self, scroll_count=3):
+        """페이지 스크롤"""
+        for _ in range(scroll_count):
+            await asyncio.to_thread(
+                self.driver.execute_script,
+                "window.scrollTo(0, document.body.scrollHeight);"
+            )
+            await asyncio.sleep(1)
+    
+    async def extract_job_data(self, element):
+        """채용공고 데이터 추출"""
+        try:
+            data = {}
+            
+            # 비동기로 데이터 추출
+            data['title'] = await asyncio.to_thread(
+                lambda: element.find_element(By.CSS_SELECTOR, self.selectors['title']).text.strip()
+            )
+            
+            data['url'] = await asyncio.to_thread(
+                lambda: element.find_element(By.CSS_SELECTOR, self.selectors['title']).get_attribute('href')
+            )
+            
+            data['company'] = await asyncio.to_thread(
+                lambda: element.find_element(By.CSS_SELECTOR, self.selectors['company']).text.strip()
+            )
+            
+            # 조건 정보 추출
+            conditions = await asyncio.to_thread(
+                lambda: element.find_elements(By.CSS_SELECTOR, '.job_condition span')
+            )
+            
+            data['location'] = conditions[0].text.strip() if len(conditions) > 0 else ''
+            data['experience'] = conditions[1].text.strip() if len(conditions) > 1 else ''
+            data['salary'] = conditions[2].text.strip() if len(conditions) > 2 else ''
+            
+            # 태그 추출
+            tags = await asyncio.to_thread(
+                lambda: element.find_elements(By.CSS_SELECTOR, self.selectors.get('tags', '.tag'))
+            )
+            data['tags'] = [tag.text.strip() for tag in tags if tag.text.strip()]
+            
+            return data
+            
+        except Exception as e:
+            logger.warning(f"데이터 추출 실패: {e}")
+            return None
+    
+    async def delay(self):
+        """요청 간 지연"""
+        await asyncio.sleep(random.uniform(1, 3))

@@ -55,7 +55,7 @@ class CrawlingService {
 
       // Process crawled data
       if (result.success && result.data) {
-        const processedJobs = await this.processcrawledData(result.data, {
+        const processedJobs = await this.processCrawledData(result.data, {
           keyword,
           jobCategory,
           experienceLevel,
@@ -90,19 +90,42 @@ class CrawlingService {
    */
   async executePythonScript(pythonCmd, args, crawlId) {
     return new Promise((resolve, reject) => {
-      const timeout = 300000; // 5 minutes timeout
+      const timeout = 600000; // 10분으로 연장
       let output = '';
       let errorOutput = '';
+      let isTimeout = false;
 
-      console.log(`Executing: ${pythonCmd} ${args.join(' ')}`);
+      console.log(`[${crawlId}] Executing: ${pythonCmd} ${args.join(' ')}`);
 
       const process = spawn(pythonCmd, args, {
         cwd: this.pythonPath,
-        env: { ...process.env, PYTHONPATH: this.pythonPath },
+        env: {
+          ...process.env,
+          PYTHONPATH: this.pythonPath,
+          PYTHONUNBUFFERED: '1', // 버퍼링 없이 즉시 출력
+        },
       });
 
-      // Track active process
-      this.activeCrawlers.set(crawlId, process);
+      this.activeCrawlers.set(crawlId, {
+        process,
+        startTime: Date.now(),
+        status: 'running',
+      });
+
+      // 프로세스 모니터링
+      const monitorInterval = setInterval(() => {
+        const crawler = this.activeCrawlers.get(crawlId);
+        if (crawler && Date.now() - crawler.startTime > timeout) {
+          isTimeout = true;
+          clearInterval(monitorInterval);
+          this.stopCrawling(crawlId);
+          reject(
+            new Error(
+              `Crawling process ${crawlId} timed out after ${timeout / 1000}s`
+            )
+          );
+        }
+      }, 10000);
 
       process.stdout.on('data', (data) => {
         const chunk = data.toString();
@@ -113,25 +136,41 @@ class CrawlingService {
       process.stderr.on('data', (data) => {
         const chunk = data.toString();
         errorOutput += chunk;
-        console.error(`[${crawlId}] stderr:`, chunk.trim());
+        // 에러가 아닌 로그성 stderr는 무시
+        if (!chunk.includes('[INFO]') && !chunk.includes('[DEBUG]')) {
+          console.error(`[${crawlId}] stderr:`, chunk.trim());
+        }
       });
 
       process.on('close', (code) => {
+        clearInterval(monitorInterval);
         this.activeCrawlers.delete(crawlId);
+
+        if (isTimeout) return; // 이미 타임아웃으로 처리됨
 
         if (code === 0) {
           try {
-            // Try to parse JSON output
-            const jsonMatch = output.match(/\{.*\}/s);
+            // 더 엄격한 JSON 파싱
+            const jsonMatch = output.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               const data = JSON.parse(jsonMatch[0]);
+              if (!data || !data.jobs) {
+                throw new Error('Invalid crawling data format');
+              }
               resolve({ success: true, data });
             } else {
               resolve({ success: true, data: { jobs: [] } });
             }
           } catch (parseError) {
-            console.error('Failed to parse crawling output:', parseError);
-            resolve({ success: true, data: { jobs: [] } });
+            console.error(
+              `[${crawlId}] Failed to parse crawling output:`,
+              parseError
+            );
+            resolve({
+              success: false,
+              error: 'Invalid data format',
+              data: { jobs: [] },
+            });
           }
         } else {
           reject(
@@ -141,25 +180,17 @@ class CrawlingService {
       });
 
       process.on('error', (error) => {
+        clearInterval(monitorInterval);
         this.activeCrawlers.delete(crawlId);
         reject(new Error(`Failed to start Python process: ${error.message}`));
       });
-
-      // Set timeout
-      setTimeout(() => {
-        if (this.activeCrawlers.has(crawlId)) {
-          process.kill('SIGTERM');
-          this.activeCrawlers.delete(crawlId);
-          reject(new Error('Crawling process timed out'));
-        }
-      }, timeout);
     });
   }
 
   /**
    * Process crawled data and save to database
    */
-  async processrawledData(crawledData, metadata) {
+  async processCrawledData(crawledData, metadata) {
     const { keyword, jobCategory, experienceLevel } = metadata;
     const jobs = crawledData.jobs || [];
     const processedJobs = [];
@@ -624,6 +655,19 @@ class CrawlingService {
     } catch (error) {
       console.error('Error in cleanupOldData:', error);
       throw new Error('Failed to cleanup old data');
+    }
+  }
+
+  /**
+   * Cleanup active crawlers and resources
+   */
+  async cleanup() {
+    for (const [crawlId, crawler] of this.activeCrawlers.entries()) {
+      try {
+        await this.stopCrawling(crawlId);
+      } catch (error) {
+        console.error(`Failed to stop crawler ${crawlId}:`, error);
+      }
     }
   }
 }

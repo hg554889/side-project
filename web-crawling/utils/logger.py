@@ -2,7 +2,15 @@ from loguru import logger
 import sys
 from pathlib import Path
 
-def setup_logger():
+def setup_logger(name: str = "crawler"):
+    """로거 설정
+    
+    Args:
+        name (str): 로거 이름 (기본값: "crawler")
+    
+    Returns:
+        Logger: 설정된 로거 객체
+    """
     # 로그 디렉토리 생성
     log_dir = Path(__file__).parent.parent / 'logs'
     log_dir.mkdir(exist_ok=True)
@@ -10,20 +18,30 @@ def setup_logger():
     # 기존 핸들러 제거
     logger.remove()
     
-    # 콘솔 로그
-    logger.add(
-        sys.stdout,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        level="INFO"
+    # 콘솔 출력 포맷 설정
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{line}</cyan> | "
+        "<level>{message}</level>"
     )
     
-    # 파일 로그
+    # 콘솔 핸들러 추가
     logger.add(
-        log_dir / "crawler.log",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+        sys.stderr,
+        format=log_format,
+        level="INFO",
+        enqueue=True,
+    )
+    
+    # 파일 핸들러 추가
+    logger.add(
+        f"logs/{name}.log",
+        format=log_format,
         level="DEBUG",
-        rotation="10 MB",
-        retention="30 days"
+        rotation="500 MB",
+        compression="zip",
+        enqueue=True,
     )
     
-    return logger
+    return logger.bind(name=name)
