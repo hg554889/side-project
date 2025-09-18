@@ -7,6 +7,7 @@ import os
 import random
 from dotenv import load_dotenv
 import google.generativeai as genai
+import google.api_core.exceptions
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -22,7 +23,10 @@ import hashlib
 import re
 from config.settings import settings
 from config.categories import JOB_CATEGORIES, TECH_KEYWORDS
-from config.sites_config import SITES_CONFIG  # Add this import
+from config.sites_config import SITES_CONFIG
+from config.categories import JOB_CATEGORIES  # Add this import
+from database.mongodb_connector import mongodb_connector
+from database.redis_connector import redis_connector
 # 로거 설정
 from utils.logger import setup_logger
 logger = setup_logger("base_crawler")
@@ -90,7 +94,7 @@ class GeminiAICrawler(BaseCrawler):
     def __init__(self, site_name, site_config):
         super().__init__(site_name, site_config)
         self.setup_gemini()
-        self.crawl_queue = asyncio.Queue()
+        self.keyword_cache = {}
         
     def setup_gemini(self):
         """Gemini AI 설정"""
@@ -138,14 +142,21 @@ class GeminiAICrawler(BaseCrawler):
     
     async def generate_smart_keywords(self, base_keyword: str, category: str) -> List[str]:
         """Gemini로 스마트 키워드 생성"""
+        if base_keyword in self.keyword_cache:
+            logger.info(f"캐시에서 '{base_keyword}'에 대한 키워드를 가져옵니다.")
+            return self.keyword_cache[base_keyword]
+
         if not self.ai_model:
             return [base_keyword]
-            
-        try:
-            # Add delay between API calls
-            await asyncio.sleep(10)  # Wait 10 seconds between calls
-            
-            prompt = f"""
+
+        max_retries = 5
+        base_delay = 5  # seconds
+        for i in range(max_retries):
+            try:
+                # Add delay between API calls
+                await asyncio.sleep(10)  # Wait 10 seconds between calls
+                
+                prompt = f"""
 Generate 3-5 related job search keywords for:
 - Base keyword: {base_keyword}
 - Category: {category}
@@ -158,30 +169,44 @@ Requirements:
 Format: Return only a JSON array
 Example: ["Python", "백엔드 개발자", "Django"]
 """
-        
-            response = await asyncio.to_thread(
-                self.ai_model.generate_content,
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,
-                    max_output_tokens=50
-                )
-            )
             
-            keywords_text = response.text.strip()
-            if keywords_text.startswith('```'):
-                keywords_text = keywords_text.split('\n')[1:-1]
-                keywords_text = '\n'.join(keywords_text)
-        
-            keywords = json.loads(keywords_text)
-            all_keywords = list(set([base_keyword] + keywords))
-        
-            logger.info(f"AI 키워드 생성: {all_keywords}")
-            return all_keywords[:3]  # Limit to 3 keywords to reduce API calls
-        
-        except Exception as e:
-            logger.warning(f"AI 키워드 생성 실패, 기본값 사용: {e}")
-            return [base_keyword]
+                response = await asyncio.to_thread(
+                    self.ai_model.generate_content,
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        max_output_tokens=50
+                    )
+                )
+                
+                keywords_text = response.text.strip()
+                if keywords_text.startswith('```'):
+                    keywords_text = keywords_text.split('\n')[1:-1]
+                    keywords_text = '\n'.join(keywords_text)
+            
+                keywords = json.loads(keywords_text)
+                all_keywords = list(set([base_keyword] + keywords))
+            
+                logger.info(f"AI 키워드 생성: {all_keywords}")
+                self.keyword_cache[base_keyword] = all_keywords[:3]
+                return all_keywords[:3]  # Limit to 3 keywords to reduce API calls
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON 디코딩 실패: {e}, 응답: {keywords_text}")
+                return [base_keyword]
+
+            except google.api_core.exceptions.ResourceExhausted as e:
+                if i == max_retries - 1:
+                    logger.error(f"API call failed after {max_retries} retries: {e}")
+                    return [base_keyword]
+                
+                delay = base_delay * (2 ** i) + random.uniform(0, 1)
+                logger.warning(f"Rate limit exceeded. Retrying in {delay:.2f} seconds...")
+                await asyncio.sleep(delay)
+
+            except Exception as e:
+                logger.warning(f"AI 키워드 생성 실패, 기본값 사용: {e}")
+                return [base_keyword]
     
     async def ai_filter_jobs(self, jobs: List[Dict]) -> List[Dict]:
         """Gemini로 채용공고 품질 필터링"""
@@ -215,19 +240,22 @@ Example: ["Python", "백엔드 개발자", "Django"]
     
     async def evaluate_job_batch(self, jobs: List[Dict]) -> List[float]:
         """채용공고 배치 품질 평가"""
-        try:
-            job_summaries = []
-            for i, job in enumerate(jobs):
-                summary = f"""
+        max_retries = 5
+        base_delay = 5  # seconds
+        for i in range(max_retries):
+            try:
+                job_summaries = []
+                for i, job in enumerate(jobs):
+                    summary = f"""
 {i+1}. 회사: {job.get('company_name', 'Unknown')}
    직무: {job.get('job_title', '미명시')}
    위치: {job.get('work_location', '미명시')}
    급여: {job.get('salary_range', '미명시')}
    키워드: {job.get('keywords', [])}
 """
-                job_summaries.append(summary)
-            
-            prompt = f"""
+                    job_summaries.append(summary)
+                
+                prompt = f"""
 다음 채용공고들의 품질을 각각 0-100점으로 평가해주세요.
 
 {chr(10).join(job_summaries)}
@@ -241,94 +269,49 @@ Example: ["Python", "백엔드 개발자", "Django"]
 응답 형식: JSON 배열로 숫자만
 예시: [85, 72, 90, 65, 78]
 """
-            
-            response = await asyncio.to_thread(
-                self.ai_model.generate_content, 
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,
-                    max_output_tokens=100
+                
+                response = await asyncio.to_thread(
+                    self.ai_model.generate_content, 
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        max_output_tokens=100
+                    )
                 )
-            )
-            
-            scores_text = response.text.strip()
-            if scores_text.startswith('```'):
-                scores_text = scores_text.split('\n')[1:-1]
-                scores_text = '\n'.join(scores_text)
-            
-            scores = json.loads(scores_text)
-            
-            # 점수 검증 및 정규화
-            validated_scores = []
-            for score in scores:
-                validated_score = min(max(float(score), 0), 100)
-                validated_scores.append(validated_score)
-            
-            return validated_scores
-            
-        except Exception as e:
-            logger.warning(f"배치 평가 실패: {e}")
-            return [75.0] * len(jobs)  # 기본값 반환
+                
+                scores_text = response.text.strip()
+                if scores_text.startswith('```'):
+                    scores_text = scores_text.split('\n')[1:-1]
+                    scores_text = '\n'.join(scores_text)
+                
+                scores = json.loads(scores_text)
+                
+                # 점수 검증 및 정규화
+                validated_scores = []
+                for score in scores:
+                    validated_score = min(max(float(score), 0), 100)
+                    validated_scores.append(validated_score)
+                
+                return validated_scores
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON 디코딩 실패: {e}, 원시 응답: {response.text}")
+                return [75.0] * len(jobs)
+
+            except google.api_core.exceptions.ResourceExhausted as e:
+                if i == max_retries - 1:
+                    logger.error(f"API call failed after {max_retries} retries: {e}")
+                    return [75.0] * len(jobs)
+                
+                delay = base_delay * (2 ** i) + random.uniform(0, 1)
+                logger.warning(f"Rate limit exceeded. Retrying in {delay:.2f} seconds...")
+                await asyncio.sleep(delay)
+                
+            except Exception as e:
+                logger.warning(f"배치 평가 실패: {e}")
+                return [75.0] * len(jobs)
     
-    async def ai_analyze_trends(self, jobs: List[Dict]) -> Dict:
-        """수집된 채용공고 트렌드 분석"""
-        if not self.ai_model or not jobs:
-            return {}
-        
-        try:
-            # 데이터 요약 준비
-            companies = [job.get('company_name', '') for job in jobs]
-            titles = [job.get('job_title', '') for job in jobs]
-            keywords = []
-            for job in jobs:
-                keywords.extend(job.get('keywords', []))
-            
-            prompt = f"""
-다음 채용공고 데이터를 분석해서 트렌드를 요약해주세요.
 
-수집된 공고 수: {len(jobs)}개
-주요 회사들: {companies[:10]}
-주요 직무들: {titles[:10]}
-기술 키워드들: {keywords[:20]}
-
-분석할 내용:
-1. 인기 있는 기술스택 TOP 5
-2. 주요 채용 회사 유형
-3. 평균 급여 수준
-4. 주요 근무 지역
-5. 현재 시장 트렌드
-
-응답 형식: JSON 객체
-{{
-  "top_skills": ["skill1", "skill2", ...],
-  "company_types": ["대기업", "스타트업", ...],
-  "salary_insights": "분석 내용",
-  "locations": ["서울", "경기", ...],
-  "market_trend": "전체적인 시장 트렌드 요약"
-}}
-"""
-            
-            response = await asyncio.to_thread(
-                self.ai_model.generate_content,
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.2,
-                    max_output_tokens=500
-                )
-            )
-            
-            analysis_text = response.text.strip()
-            if analysis_text.startswith('```'):
-                analysis_text = analysis_text.split('\n')[1:-1]
-                analysis_text = '\n'.join(analysis_text)
-            
-            analysis = json.loads(analysis_text)
-            logger.info("AI 트렌드 분석 완료")
-            return analysis
-            
-        except Exception as e:
-            logger.warning(f"트렌드 분석 실패: {e}")
-            return {}
     
     async def schedule_crawling(self, jobs: List[CrawlJob]):
         """크롤링 작업 스케줄링"""
@@ -336,7 +319,8 @@ Example: ["Python", "백엔드 개발자", "Django"]
         jobs.sort(key=lambda x: x.priority, reverse=True)
         
         for job in jobs:
-            await self.crawl_queue.put(job)
+            # Redis 큐에 작업 추가
+            redis_connector.add_to_queue("crawl_jobs", json.dumps(job.__dict__))
         
         # 워커 실행 (동시성 제한)
         workers = [
@@ -344,40 +328,50 @@ Example: ["Python", "백엔드 개발자", "Django"]
             for _ in range(1)  # Gemini는 동시 요청 제한이 있으므로 1개만
         ]
         
-        await self.crawl_queue.join()
+        # Redis 큐는 join()이 필요 없으므로 제거
         
-        # 워커 종료
-        for worker in workers:
-            worker.cancel()
+        return workers
     
     async def crawl_worker(self):
         """크롤링 워커"""
         while True:
             try:
-                job = await self.crawl_queue.get()
+                # Redis 큐에서 작업 가져오기
+                job_str = await asyncio.to_thread(redis_connector.get_from_queue, "crawl_jobs")
+                if job_str is None:
+                    await asyncio.sleep(1) # 큐가 비어있으면 잠시 대기
+                    continue
+                
+                job = CrawlJob(**json.loads(job_str))
                 
                 logger.info(f"🚀 크롤링 시작: {job.site_name} - {job.keywords}")
                 
-                results = []
+                all_job_results = []
                 for keyword in job.keywords:
                     job_results = await self.smart_crawl(keyword, "개발자")
-                    results.extend(job_results[:job.max_jobs])
+                    all_job_results.extend(job_results[:job.max_jobs])
                     
                     # 중요: 요청 간 대기
                     await asyncio.sleep(random.uniform(5, 8))
                 
-                # 트렌드 분석
-                trends = await self.ai_analyze_trends(results)
+                # Save results to database
+                if all_job_results:
+                    logger.info(f"데이터베이스에 {len(all_job_results)}개의 채용공고를 저장합니다.")
+                    for job_posting in all_job_results:
+                        await mongodb_connector.insert_job_posting(job_posting)
+
+                logger.info(f"✅ 크롤링 완료: {len(all_job_results)}개 수집")
+                # 트렌드 분석 기능은 별도 모듈로 분리됨
                 
-                logger.info(f"✅ 크롤링 완료: {len(results)}개 수집")
-                if trends:
-                    logger.info(f"📊 트렌드: {trends.get('market_trend', 'N/A')}")
-                
-                self.crawl_queue.task_done()
-                
+                # Redis 큐는 task_done()이 필요 없음
+
+            except asyncio.CancelledError:
+                logger.info("워커가 종료됩니다.")
+                break
+
             except Exception as e:
                 logger.error(f"워커 에러: {e}")
-                self.crawl_queue.task_done()
+                # Redis 큐는 task_done()이 필요 없음
 
     async def crawl_with_keyword(self, keyword: str) -> List[Dict]:
         """키워드 기반 크롤링 구현"""
@@ -414,28 +408,36 @@ Example: ["Python", "백엔드 개발자", "Django"]
         self.logger.error(f"키워드 '{keyword}' 크롤링 최종 실패")
         return []
 
+    def selenium_operations(self, url):
+        self.logger.info(f"Selenium으로 URL에 접근 중: {url}")
+        self.driver.get(url)
+        time.sleep(2)
+        self.logger.info(f"페이지 타이틀: {self.driver.title}")
+        job_list_selector = self.site_config['selectors']['job_list']
+        self.logger.info(f"'{job_list_selector}' 선택자를 기다리는 중...")
+        wait = WebDriverWait(self.driver, 10)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, job_list_selector)))
+        self.logger.info("선택자를 찾았습니다. 페이지 소스를 파싱합니다.")
+        return self.driver.page_source
+
     async def _crawl_with_selenium(self, url: str) -> List[Dict]:
         """Selenium을 사용한 크롤링"""
+        if redis_connector.is_url_visited("visited_urls", url):
+            self.logger.info(f"이미 방문한 URL: {url}")
+            return []
+
         if not self.driver:
             return []
             
         try:
-            await asyncio.to_thread(self.driver.get, url)
-            await asyncio.sleep(2)  # 페이지 로딩 대기
-            
-            job_list_selector = self.site_config['selectors']['job_list']
-            wait = WebDriverWait(self.driver, 10)
-            await asyncio.to_thread(
-                wait.until,
-                EC.presence_of_element_located((By.CSS_SELECTOR, job_list_selector))
-            )
-            
-            page_source = await asyncio.to_thread(lambda: self.driver.page_source)
+            page_source = await asyncio.to_thread(self.selenium_operations, url)
             soup = BeautifulSoup(page_source, 'html.parser')
+            redis_connector.add_visited_url("visited_urls", url) # Add to visited URLs
             return self._parse_job_items(soup)
             
         except Exception as e:
             self.logger.error(f"Selenium 크롤링 실패: {e}")
+            
             # 드라이버 재초기화
             self.close_driver()
             self.setup_driver()
@@ -443,6 +445,10 @@ Example: ["Python", "백엔드 개발자", "Django"]
 
     async def _crawl_with_requests(self, url: str) -> List[Dict]:
         """Requests를 사용한 크롤링"""
+        if redis_connector.is_url_visited("visited_urls", url):
+            self.logger.info(f"이미 방문한 URL: {url}")
+            return []
+
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/119.0.0.0 Safari/537.36',
@@ -458,6 +464,7 @@ Example: ["Python", "백엔드 개발자", "Django"]
                     if response.status == 200:
                         html = await response.text()
                         soup = BeautifulSoup(html, 'html.parser')
+                        redis_connector.add_visited_url("visited_urls", url) # Add to visited URLs
                         return self._parse_job_items(soup)
                     else:
                         self.logger.warning(f"HTTP 요청 실패: {response.status}")
@@ -492,41 +499,69 @@ Example: ["Python", "백엔드 개발자", "Django"]
 async def main():
     """메인 실행 함수"""
     crawler = None
+    workers = []
     try:
-        # site_config 가져오기
-        site_config = SITES_CONFIG.get('saramin')
-        if not site_config:
-            raise ValueError("사람인 설정을 찾을 수 없습니다")
+        await mongodb_connector.connect()
+        redis_connector.connect()
 
-        # 크롤러 초기화
-        crawler = GeminiAICrawler("saramin", site_config)
+        all_workers = []
+        target_sites = ["saramin", "jobkorea", "worknet", "comento", "securityfarm"]
         
-        # 크롤링 작업 정의
-        jobs = [
-            CrawlJob(
-                site_name="saramin",
-                keywords=["React"],
-                max_jobs=20,
-                priority=1,
-                ai_filters={"min_quality": 75}
-            ),
-            CrawlJob(
-                site_name="saramin",
-                keywords=["Python"],
-                max_jobs=15,
-                priority=2
-            )
-        ]
+        # JOB_CATEGORIES에서 모든 키워드를 동적으로 수집
+        all_keywords_from_categories = []
+        for category_keywords in JOB_CATEGORIES.values():
+            all_keywords_from_categories.extend(category_keywords)
+        common_keywords = list(set(all_keywords_from_categories)) # 중복 제거
+
+        logger.info(f"--- 크롤링 시작 (대상 사이트: {', '.join(target_sites)}) ---")
+
+        for site_name in target_sites:
+            site_config = SITES_CONFIG.get(site_name)
+            if not site_config:
+                logger.warning(f"{site_name} 설정을 찾을 수 없습니다. 이 사이트는 건너뜁니다.")
+                continue
+            
+            logger.info(f"--- {site_name} 사이트 크롤러 초기화 ---")
+            crawler_instance = GeminiAICrawler(site_name, site_config)
+            
+            jobs_for_site = [
+                CrawlJob(
+                    site_name=site_name,
+                    keywords=common_keywords,
+                    max_jobs=15,
+                    priority=site_config.get('priority', 1)
+                )
+            ]
+            
+            # 각 사이트별로 스케줄링하고 워커를 수집
+            site_workers = await crawler_instance.schedule_crawling(jobs_for_site)
+            all_workers.extend(site_workers)
         
-        # 스케줄링 실행
-        logger.info("🎯 AI 기반 스마트 크롤링 시작!")
-        await crawler.schedule_crawling(jobs)
+        if not all_workers:
+            logger.error("크롤링할 사이트가 설정되지 않았거나 워커가 생성되지 않았습니다. 스크립트를 종료합니다.")
+            return
+
+        # 모든 워커가 작업을 처리할 시간을 주기 위해 잠시 대기
+        # 실제 환경에서는 큐가 비워질 때까지 기다리는 로직이 필요합니다.
+        await asyncio.sleep(120) # 모든 사이트와 키워드를 고려하여 대기 시간 증가
         
+        # finally 블록에서 사용할 수 있도록 변수 이름 통일
+        workers = all_workers
+
     except Exception as e:
         logger.error(f"메인 실행 에러: {e}")
     finally:
+        # 워커 종료
+        for worker in workers:
+            worker.cancel()
+        if workers:
+            await asyncio.gather(*workers, return_exceptions=True)
+
         if crawler and hasattr(crawler, 'driver'):
             crawler.close_driver()
+        
+        await mongodb_connector.close()
+        redis_connector.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
