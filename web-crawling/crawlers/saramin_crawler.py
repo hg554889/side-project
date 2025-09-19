@@ -17,32 +17,23 @@ class SaraminCrawler(BaseCrawler):
         self.base_url = SITES_CONFIG['saramin']['base_url']
         self.selectors = SITES_CONFIG['saramin']['selectors']
     
-    async def crawl(self, options=None):
-        if options is None:
-            options = {}
-        
-        keyword = options.get('keyword', '')
-        category = options.get('category', '')
-        experience_level = options.get('experience_level', '')
-        max_jobs = options.get('max_jobs', 50)
+    async def crawl_with_keyword(self, keyword: str) -> list:
+        max_jobs = 50
         
         jobs = []
         
         try:
-            self.setup_driver()
-            
             # 검색 URL 구성
-            search_params = {
-                'recruitFilterType': 'domestic',
-                'searchType': 'search',
-                'searchword': keyword,
-                'cat_kewd': category,
-                'exp_cd': self.map_experience_level(experience_level)
-            }
-            
-            # URL 생성
-            params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
-            url = f"{self.base_url}{SITES_CONFIG['saramin']['search_path']}?{params_str}"
+            if keyword:
+                search_params = {
+                    'recruitFilterType': 'domestic',
+                    'searchType': 'search',
+                    'searchword': keyword,
+                }
+                params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
+                url = f"{self.base_url}{SITES_CONFIG['saramin']['search_path']}?{params_str}"
+            else:
+                url = f"{self.base_url}{SITES_CONFIG['saramin']['search_path']}"
             
             logger.info(f"사람인 크롤링 시작: {url}")
             
@@ -84,10 +75,6 @@ class SaraminCrawler(BaseCrawler):
             logger.error(f"사람인 크롤링 실패: {e}")
             raise
         
-        finally:
-            self.close_driver()
-            await self.delay()
-        
         return jobs
     
     async def wait_for_element(self, by, selector, timeout=10):
@@ -100,6 +87,8 @@ class SaraminCrawler(BaseCrawler):
             return element
         except TimeoutException:
             logger.warning(f"요소를 찾을 수 없음: {selector}")
+            with open("saramin_page_source.html", "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
             return None
     
     async def scroll_page(self, scroll_count=3):
@@ -150,6 +139,31 @@ class SaraminCrawler(BaseCrawler):
             logger.warning(f"데이터 추출 실패: {e}")
             return None
     
-    async def delay(self):
-        """요청 간 지연"""
-        await asyncio.sleep(random.uniform(1, 3))
+    # 현재 클래스에 다음 메서드를 추가하세요:
+
+    async def crawl(self, options=None):
+        """main.py에서 호출되는 메인 크롤링 메서드"""
+        if options is None:
+            options = {}
+        
+        try:
+            # 셀레니움 드라이버 설정
+            self.setup_driver()
+            logger.info("사람인 드라이버 설정 완료")
+            
+            # 기존 crawl_with_keyword 메서드 활용
+            keyword = options.get('keyword', 'React')
+            jobs = await self.crawl_with_keyword(keyword)
+            
+            logger.info(f"사람인 크롤링 완료: {len(jobs)}개")
+            return jobs
+            
+        except Exception as e:
+            logger.error(f"사람인 크롤링 실패: {e}")
+            raise
+        finally:
+            # 드라이버 종료
+            try:
+                self.close_driver()
+            except:
+                pass

@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  crawler:
+    build: .
+    env_file:
+      - ./.env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - CHROMEDRIVER_PATH=/usr/bin/chromedriver
+      - SERVER_API_URL=http://server:3000 # 'server'로 수정
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    depends_on:
+      - redis
+      - server # 'server'로 수정
+    volumes:
+      - ./logs:/usr/src/app/logs
+      - ./web-crawling:/usr/src/app/web-crawling
+    networks:
+      - crawler_net
+
+  server: # 'server'로 수정
+    build:
+      context: ./server # 'server' 폴더 경로
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/my_database
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    networks:
+      - crawler_net
+  
+  mongo:
+    image: mongo:6.0 # 예시 버전
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - crawler_net
+  
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crawler_net
+
+volumes:
+  redis_data:
+  mongo_data:
+
+networks:
+  crawler_net:
+    driver: bridge

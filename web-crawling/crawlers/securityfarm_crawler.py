@@ -10,28 +10,26 @@ logger = setup_logger()
 class SecurityfarmCrawler(BaseCrawler):
     def __init__(self):
         super().__init__('securityfarm', SITES_CONFIG['securityfarm'])
+        self.base_url = SITES_CONFIG['securityfarm']['base_url']
+        self.selectors = SITES_CONFIG['securityfarm']['selectors']
     
-    async def crawl(self, options=None):
-        if options is None:
-            options = {}
-        
-        keyword = options.get('keyword', '')
-        max_jobs = options.get('max_jobs', 50)
+    async def crawl_with_keyword(self, keyword: str) -> list:
+        max_jobs = 50
         
         jobs = []
         
         try:
-            self.setup_driver()
             
             # 시큐리티팜 검색 URL 구성
-            search_params = {
-                'search': keyword,
-                'category': 'all'
-            }
-            
-            # URL 생성
-            params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
-            url = f"{self.base_url}{self.config['search_path']}?{params_str}"
+            if keyword:
+                search_params = {
+                    'search': keyword,
+                    'category': 'all'
+                }
+                params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
+                url = f"{self.base_url}{self.site_config['search_path']}?{params_str}"
+            else:
+                url = f"{self.base_url}{self.site_config['search_path']}"
             
             logger.info(f"시큐리티팜 크롤링 시작: {url}")
             
@@ -39,7 +37,7 @@ class SecurityfarmCrawler(BaseCrawler):
             time.sleep(4)  # 시큐리티팜은 로딩이 좀 걸릴 수 있음
             
             # 채용공고 리스트 대기
-            job_list_element = self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
+            job_list_element = await self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
             if not job_list_element:
                 logger.warning("시큐리티팜: 채용공고 목록을 찾을 수 없습니다.")
                 return jobs
@@ -68,7 +66,7 @@ class SecurityfarmCrawler(BaseCrawler):
         
         finally:
             self.close_driver()
-            self.delay()
+            await self.delay()
         
         return jobs
     

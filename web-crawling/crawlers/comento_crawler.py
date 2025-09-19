@@ -1,51 +1,56 @@
 from crawlers.base_crawler import BaseCrawler
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from config.sites_config import SITES_CONFIG
 from utils.logger import setup_logger
 import time
+import asyncio
+import random
 
 logger = setup_logger()
 
 class ComentoCrawler(BaseCrawler):
     def __init__(self):
         super().__init__('comento', SITES_CONFIG['comento'])
+        self.base_url = SITES_CONFIG['comento']['base_url']
+        self.selectors = SITES_CONFIG['comento']['selectors']
     
-    async def crawl(self, options=None):
-        if options is None:
-            options = {}
-        
-        keyword = options.get('keyword', '')
-        max_jobs = options.get('max_jobs', 50)
+    async def crawl_with_keyword(self, keyword: str) -> list:
+        max_jobs = 50
         
         jobs = []
         
         try:
-            self.setup_driver()
-            
-            # 원티드에서 코멘토 관련 + 키워드 검색
-            search_params = {
-                'query': f"{keyword} 코멘토",
-                'job_sort': 'job.latest_order'
-            }
-            
-            # URL 생성
-            params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
-            url = f"{self.base_url}{self.config['search_path']}?{params_str}"
+            # Temporarily change search_path for debugging
+            if keyword:
+                search_params = {
+                    'query': f"{keyword} 코멘토",
+                    'job_sort': 'job.latest_order'
+                }
+                params_str = '&'.join([f"{k}={v}" for k, v in search_params.items() if v])
+                url = f"{self.base_url}/career/recruit?{params_str}" # Changed search_path
+            else:
+                url = f"{self.base_url}/career/recruit" # Changed search_path
             
             logger.info(f"코멘토(원티드) 크롤링 시작: {url}")
             
             self.driver.get(url)
             time.sleep(3)
             
+            # Save page source for debugging
+            with open("/tmp/comento_recruit_page_source.html", "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
+
             # 채용공고 리스트 대기
-            job_list_element = self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
+            job_list_element = await self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
             if not job_list_element:
                 logger.warning("코멘토: 채용공고 목록을 찾을 수 없습니다.")
                 return jobs
             
             # 페이지 스크롤 (더 많은 공고 로드)
-            self.scroll_to_load_more(2)
+            await self.scroll_to_load_more(2)
             
             # 모든 채용공고 요소 찾기
             job_elements = self.driver.find_elements(By.CSS_SELECTOR, self.selectors['job_list'])
@@ -69,11 +74,18 @@ class ComentoCrawler(BaseCrawler):
             logger.error(f"코멘토 크롤링 실패: {e}")
             raise
         
-        finally:
-            self.close_driver()
-            self.delay()
-        
         return jobs
+    
+
+
+    async def scroll_to_load_more(self, scroll_count=3):
+        """페이지 스크롤"""
+        for _ in range(scroll_count):
+            await asyncio.to_thread(
+                self.driver.execute_script,
+                "window.scrollTo(0, document.body.scrollHeight);"
+            )
+            await asyncio.sleep(1)
     
     def extract_job_data(self, element):
         """개별 채용공고 데이터 추출"""

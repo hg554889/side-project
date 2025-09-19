@@ -99,6 +99,10 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Swagger
+const { swaggerUi, specs } = require('./swagger');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
 // API Routes
 app.use('/api/jobs', jobRoutes);
 app.use('/api/analysis', analysisRoutes);

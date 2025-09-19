@@ -1,0 +1,11 @@
+selenium
+python-dotenv
+google-generativeai
+beautifulsoup4
+requests
+aiohttp
+httpx
+redis
+loguru
+motor
+pymongo

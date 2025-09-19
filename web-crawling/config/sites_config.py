@@ -42,27 +42,6 @@ SITES_CONFIG = {
         'rate_limit': 3,
         'max_pages': 10
     },
-    'jobkorea': {
-        'base_url': 'https://www.jobkorea.co.kr',
-        'search_path': '/Search/',
-        'selectors': {
-            'job_list': 'div[data-sentry-component="CardCommon"]',
-            'title': 'a[data-sentry-component="Title"]',
-            'company': 'div[class*="styles_mb_space4__"] a',
-            'location': 'div[class*="Flex_gap_space16__"] span:nth-child(4)',
-            'experience': 'div[class*="Flex_gap_space16__"] span:nth-child(1)',
-            'salary': 'div[class*="Flex_gap_space16__"] span:nth-child(3)',
-            'deadline': 'div[class*="Flex_gap_space16__"] > span[class*="Typography_color_gray700__"]',
-            'url': 'a[data-sentry-component="Title"]',
-            'tags': 'div[class*="styles_mb_space12__"] a',
-            'category': 'span[data-accent-color="gray900"]',
-            'description': 'div[class*="styles_mb_space8__"] a',
-            'conditions': 'div[class*="Flex_gap_space16__"]'
-        },
-        'rate_limit': 3.5,
-        'max_pages': 8,
-        'priority': 4
-    },
     'worknet': {
         'base_url': 'https://www.work.go.kr',
         'search_path': '/empInfo/empInfoSrch/list/dtlEmpSrchList.do',
@@ -101,7 +80,7 @@ SITES_CONFIG = {
         'base_url': 'https://comento.kr',
         'search_path': '/career/dreamverse',
         'selectors': {
-            'job_list': '[data-testid="job-card"]',
+            'job_list': '.c-edu-card',
             'title': '.job-title',
             'company': '.company-name',
             'location': '.location',

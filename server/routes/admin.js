@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const crawlingService = require('../services/crawlingService');
-const { dbUtils } = require('../config/database');
+const { dbUtils } = require('../config/Database');
+console.log(__dirname);
 
 /**
  * @route   GET /api/admin/health

@@ -8,6 +8,7 @@ import random
 from dotenv import load_dotenv
 import google.generativeai as genai
 import google.api_core.exceptions
+from httpx import options
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -50,31 +51,72 @@ class BaseCrawler(ABC):
         
     def setup_driver(self):
         """웹드라이버 초기화"""
+        options = Options()
+        options.add_argument(f'--user-agent={random.choice}')
+        
+        if settings.HEADLESS_BROWSER:
+            options.add_argument('--headless=new')
+            
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-features=VizDisplayCompositor')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-images')
+        options.add_argument('--disable-javascript')
+        
         try:
-            chrome_options = Options()
-            chrome_options.add_argument('--headless=new')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            self.driver = webdriver.Chrome(options=options)
+            self.driver.set_page_load_timeout(60)
+            logger.info(f"{self.site_name} 웹드라이버 초기화 완료")
             
-            # Selenium Manager will automatically handle the driver
-            service = Service()
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            self.driver.set_page_load_timeout(30)
-            
-            self.logger.info("웹드라이버 초기화 완료")
-            return True
-            
-        except Exception as e:
-            self.logger.warning(f"Chrome 드라이버 초기화 실패: {e}")
-            return False
+        except WebDriverException as e:
+            logger.error(f"{self.site_name} 웹드라이버 초기화 실패: {e}")   
+            raise
 
     def close_driver(self):
         """웹드라이버 종료"""
         if hasattr(self, 'driver'):
             self.driver.quit()
+
+    async def delay(self):
+        """요청 간 지연"""
+        await asyncio.sleep(random.uniform(1, 3))
             
+    async def wait_and_find_element(self, by, selector, timeout=10):
+        """요소 대기"""
+        try:
+            element = await asyncio.to_thread(
+                WebDriverWait(self.driver, timeout).until,
+                EC.presence_of_element_located((by, selector))
+            )
+            return element
+        except TimeoutException:
+            self.logger.warning(f"요소를 찾을 수 없음: {selector}")
+            return None
+
+    async def wait_for_element(self, selector: str, timeout: int = 10, retries: int = 3) -> bool:
+        """요소 대기 (재시도 로직 포함)"""
+        for attempt in range(retries):
+            try:
+                await asyncio.sleep(2)  # 페이지 로딩 대기
+                element = WebDriverWait(self.driver, timeout).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                )
+                return True
+            except TimeoutException:
+                if attempt < retries - 1:
+                    self.logger.warning(f"요소 찾기 재시도 {attempt + 1}/{retries}: {selector}")
+                    continue
+                self.logger.warning(f"요소를 찾을 수 없음: {selector}")
+                return False
+            except Exception as e:
+                self.logger.error(f"요소 대기 중 오류: {e}")
+                return False
+
     @abstractmethod
     async def crawl_with_keyword(self, keyword: str) -> List[Dict]:
         """키워드 기반 크롤링 (추상 메서드)"""
