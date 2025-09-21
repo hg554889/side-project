@@ -16,6 +16,7 @@ const requestLogger = require('./middleware/requestLogger');
 const jobRoutes = require('./routes/jobs');
 const analysisRoutes = require('./routes/analysis');
 const adminRoutes = require('./routes/admin');
+const chatRoutes = require('./routes/chatRoutes');
 
 // Import database connection
 const { connectDB } = require('./config/Database');
@@ -73,7 +74,7 @@ app.use(
     origin:
       process.env.NODE_ENV === 'production'
         ? ['https://skillmap.app', 'https://www.skillmap.app']
-        : ['http://localhost:5173', 'http://localhost:3000'],
+        : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -107,6 +108,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use('/api/jobs', jobRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 // API health check
 app.get('/api/health', async (req, res) => {
