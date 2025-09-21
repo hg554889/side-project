@@ -13,6 +13,23 @@ class SecurityfarmCrawler(BaseCrawler):
         self.base_url = SITES_CONFIG['securityfarm']['base_url']
         self.selectors = SITES_CONFIG['securityfarm']['selectors']
     
+    async def crawl(self, options=None):
+        """main.py에서 호출되는 메인 크롤링 메서드"""
+        if options is None:
+            options = {}
+
+        try:
+            # 기존 crawl_with_keyword 메서드 활용
+            keyword = options.get('keyword', 'React')
+            jobs = await self.crawl_with_keyword(keyword)
+
+            logger.info(f"시큐리티팜 크롤링 완료: {len(jobs)}개")
+            return jobs
+
+        except Exception as e:
+            logger.error(f"시큐리티팜 크롤링 실패: {e}")
+            raise
+
     async def crawl_with_keyword(self, keyword: str) -> list:
         max_jobs = 50
         
@@ -34,7 +51,19 @@ class SecurityfarmCrawler(BaseCrawler):
             logger.info(f"시큐리티팜 크롤링 시작: {url}")
             
             self.driver.get(url)
-            time.sleep(4)  # 시큐리티팜은 로딩이 좀 걸릴 수 있음
+
+            # 동적 로딩 대기 시간 증가
+            wait_time = self.site_config.get('wait_time', 10)
+            time.sleep(wait_time)
+
+            # 스크롤링으로 동적 콘텐츠 로드
+            if self.site_config.get('scroll_enabled', False):
+                logger.info("페이지 스크롤링으로 동적 콘텐츠 로드")
+                for i in range(3):
+                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    time.sleep(2)
+                self.driver.execute_script("window.scrollTo(0, 0);")
+                time.sleep(2)
             
             # 채용공고 리스트 대기
             job_list_element = await self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
@@ -49,11 +78,16 @@ class SecurityfarmCrawler(BaseCrawler):
             for i, element in enumerate(job_elements[:max_jobs]):
                 try:
                     raw_data = self.extract_job_data(element)
-                    if raw_data and raw_data.get('title') and raw_data.get('company'):
-                        normalized_data = self.normalize_data(raw_data)
-                        jobs.append(normalized_data)
-                        logger.debug(f"시큐리티팜: {i+1}번째 공고 추출 완료 - {raw_data.get('title')}")
-                    
+                    if raw_data:
+                        if self.validate_job_data(raw_data) and raw_data.get('title'):
+                            jobs.append(raw_data)
+                            logger.info(f"✅ 시큐리티팜: {i+1}번째 공고 추출 완료 - {raw_data.get('title')}")
+                        else:
+                            logger.info(f"❌ 시큐리티팜: {i+1}번째 - 유효하지 않은 공고: {raw_data.get('title', 'N/A')}")
+                    else:
+                        element_text = element.text.strip()[:100]
+                        logger.info(f"⚠️ 시큐리티팜: {i+1}번째 - 데이터 없음: {element_text}...")
+
                 except Exception as e:
                     logger.warning(f"시큐리티팜: {i+1}번째 공고 추출 실패 - {e}")
                     continue
@@ -73,21 +107,51 @@ class SecurityfarmCrawler(BaseCrawler):
     def extract_job_data(self, element):
         """개별 채용공고 데이터 추출"""
         try:
-            # URL 먼저 추출
-            url_elem = element.find_element(By.CSS_SELECTOR, 'a')
-            url = url_elem.get_attribute('href') if url_elem else ''
+            # 요소의 텍스트 내용 확인
+            element_text = element.text.strip()
+            if not element_text or len(element_text) < 10:
+                return None
+
+            # 키워드 필터링 제거 - 모든 데이터 수집 후 2차 가공
+
+            # URL 추출 시도 (여러 방법)
+            url = ''
+            try:
+                url_elem = element.find_element(By.CSS_SELECTOR, 'a')
+                url = url_elem.get_attribute('href') if url_elem else ''
+            except:
+                # 링크가 없어도 계속 진행
+                pass
             
-            # 제목 - 여러 선택자 시도
+            # 제목 - 텍스트에서 직접 추출
             title = ''
-            title_selectors = ['.job-title', '.card-title', 'h3', 'h4', '.title', '.subject']
+
+            # 첫 번째 시도: 구체적인 셀렉터들
+            title_selectors = [
+                'h1', 'h2', 'h3', 'h4', 'h5',
+                '.job-title', '.position-title', '.title',
+                '[class*="title"]', '[class*="position"]',
+                'strong', 'b', '.font-bold', '.font-medium'
+            ]
+
             for selector in title_selectors:
                 try:
                     title_elem = element.find_element(By.CSS_SELECTOR, selector)
                     title = title_elem.text.strip()
-                    if title:
+                    if title and len(title) > 3:  # 최소 4글자 이상
                         break
                 except NoSuchElementException:
                     continue
+
+            # 제목을 찾지 못했으면 텍스트에서 첫 번째 줄 사용
+            if not title and element_text:
+                lines = element_text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and len(line) > 3 and '채용' not in line:
+                        # 채용이라는 단어가 없고 의미있는 길이의 첫 번째 줄을 제목으로 사용
+                        title = line
+                        break
             
             # 회사명 - 여러 선택자 시도
             company = ''

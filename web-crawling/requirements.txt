@@ -1,0 +1,30 @@
+# 웹 크롤링 핵심
+selenium
+beautifulsoup4
+requests
+lxml
+
+# 데이터베이스
+pymongo
+motor
+redis
+
+# 비동기 HTTP
+aiohttp
+
+# 데이터 처리
+pandas
+numpy
+
+# 유틸리티
+python-dotenv
+colorlog
+webdriver-manager
+loguru
+
+# AI/ML
+google-generativeai
+httpx
+
+# API 모델링
+pydantic

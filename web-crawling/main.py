@@ -5,9 +5,10 @@ import json
 import time
 from typing import Dict, List, Any
 from crawlers.saramin_crawler import SaraminCrawler
-# from crawlers.worknet_crawler import WorknetCrawler
-# from crawlers.comento_crawler import ComentoCrawler
-# from crawlers.securityfarm_crawler import SecurityfarmCrawler
+from crawlers.worknet_crawler import WorknetCrawler
+from crawlers.worknet_new_crawler import WorknetNewCrawler
+from crawlers.comento_crawler import ComentoCrawler
+from crawlers.securityfarm_crawler import SecurityfarmCrawler
 from processors.data_normalizer import DataNormalizer
 from database.mongo_client import mongo_client
 from utils.logger import setup_logger
@@ -19,9 +20,10 @@ class CrawlingManager:
         try:
             self.crawlers = {
                 'saramin': SaraminCrawler(),
-                # 'worknet': WorknetCrawler(),
-                # 'comento': ComentoCrawler(),
-                # 'securityfarm': SecurityfarmCrawler(),
+                'worknet': WorknetCrawler(),
+                # 'worknet_new': WorknetNewCrawler(),  # 임시 비활성화
+                'comento': ComentoCrawler(),
+                'securityfarm': SecurityfarmCrawler(),
             }
             self.normalizer = DataNormalizer()
             logger.info("CrawlingManager 초기화 완료")
@@ -52,7 +54,7 @@ class CrawlingManager:
         logger.info("통합 크롤링 시작...")
         results = self._init_results()
         
-        sites = options.get('sites', ['saramin'])
+        sites = options.get('sites', ['saramin', 'worknet_new', 'comento', 'securityfarm'])
             
         for site_name in sites:
             if site_name not in self.crawlers:
@@ -68,7 +70,7 @@ class CrawlingManager:
                 for raw_job in raw_jobs:
                     try:
                         normalized_job = await self.normalizer.normalize(raw_job)
-                        if normalized_job.get('quality_score', 0) >= 0.1:
+                        if normalized_job.get('quality_score', 0) >= 0.01:
                             processed_jobs.append(normalized_job)
                     except Exception as e:
                         logger.warning(f"데이터 처리 실패: {e}")
@@ -219,7 +221,7 @@ class CrawlingManager:
 async def main():
     """메인 실행 함수"""
     parser = argparse.ArgumentParser(description='SkillMap 크롤링 시스템')
-    parser.add_argument('--sites', default='saramin', help='크롤링할 사이트')
+    parser.add_argument('--sites', default='saramin,worknet_new,comento,securityfarm', help='크롤링할 사이트')
     parser.add_argument('--keyword', default='React', help='검색 키워드')
     parser.add_argument('--category', default='IT/개발', help='직군 카테고리')
     parser.add_argument('--experience', default='신입', help='경험 수준')

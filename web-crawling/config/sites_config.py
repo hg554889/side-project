@@ -20,7 +20,7 @@ GLOBAL_CONFIG = {
 
 VALIDATION_RULES = {
     'required_fields': ['title', 'company', 'description', 'category'],
-    'min_description_length': 50,
+    'min_description_length': 10,
     'max_title_length': 200,
     'keyword_min_length': 2
 }
@@ -43,73 +43,93 @@ SITES_CONFIG = {
         'max_pages': 10
     },
     'worknet': {
-        'base_url': 'https://www.work.go.kr',
+        'base_url': 'https://www.work24.go.kr',
         'search_path': '/empInfo/empInfoSrch/list/dtlEmpSrchList.do',
         'selectors': {
-            'job_list': '.cp-item-list li',
-            'title': '.cp-info-tit a',
-            'company': '.cp-company-name a',
-            'location': '.cp-company-info .cp-area',
-            'experience': '.cp-company-info .cp-career',
-            'salary': '.cp-company-info .cp-salary',
-            'deadline': '.cp-date',
-            'url': '.cp-info-tit a',
-            'tags': '.cp-keyword span'
+            'job_list': '.job-item, .job-card, .listing-item, .post-item, article, div.job_list, tr[id^="listRow"]',
+            'title': 'a.t3_sb.underline_hover',
+            'company': 'td.al_left.pd24 a.cp_name',
+            'location': 'td:nth-child(3)',
+            'experience': 'td:nth-child(4)',
+            'salary': 'td:nth-child(5)',
+            'deadline': 'td:nth-child(6)',
+            'url': 'a.t3_sb.underline_hover',
+            'tags': 'td:nth-child(7)'
         },
         'rate_limit': 2,
         'max_pages': 5
     },
-    'programmers': {
-        'base_url': 'https://career.programmers.co.kr',
-        'search_path': '/job',
+    'worknet_new': {
+        'base_url': 'https://www.work24.go.kr',
+        'search_path': '/wk/a/b/1200/retriveDtlEmpSrchListInPost.do',
+        'form_path': '/wk/a/b/1200/retriveDtlEmpSrchList.do',
+        'method': 'POST',
         'selectors': {
-            'job_list': '.list-position-card',
-            'title': '.position-title',
-            'company': '.company-name',
-            'location': '.position-location',
-            'experience': '.position-experience',
-            'salary': '.position-salary',
-            'deadline': '.position-date',
-            'url': 'a',
-            'tags': '.position-tag'
+            'job_list': 'tr[id^="list"]',
+            'title': 'a[href*="empDetailAuthView.do"]',
+            'company': 'a.cp_name.underline_hover',
+            'location': 'td:nth-child(3)',
+            'experience': 'td:nth-child(4)',
+            'salary': 'td:nth-child(5)',
+            'deadline': 'td:nth-child(6)',
+            'url': 'a[href*="empDetailAuthView.do"]',
+            'tags': 'td:nth-child(7)'
         },
-        'rate_limit': 2.5,
-        'max_pages': 6
+        'search_params': {
+            'pageIndex': '1',
+            'srcKeyword': '',
+            'notSrcKeyword': '',
+            'occupation': '',
+            'region': '',
+            'careerTypes': '',
+            'employGbn': '',
+            'academicGbn': ''
+        },
+        'rate_limit': 2,
+        'max_pages': 5
     },
+
     'comento': {
         'base_url': 'https://comento.kr',
-        'search_path': '/career/dreamverse',
+        'search_path': '/career/recruit',
         'selectors': {
-            'job_list': '.c-edu-card',
-            'title': '.job-title',
-            'company': '.company-name',
-            'location': '.location',
-            'experience': '.experience',
-            'skills': '.skill-tag',
-            'url': 'a',
-            'category': '.job-category',  # Add category selector
-            'description': '.job-description',  # Add description selector
-            'salary_range': '.salary-range'  # Add salary range selector
+            'job_list': 'div, article, li, section',
+            'title': 'h1, h2, h3, h4, a, span',
+            'company': 'div, span, p, a',
+            'location': 'div, span, p',
+            'experience': 'div, span, p',
+            'skills': 'div, span, ul li',
+            'deadline': 'div, span, p',
+            'url': 'a'
         },
+        'exclude_keywords': ['로그인', '회원가입'],
+        'min_title_length': 2,
         'rate_limit': 4,
         'max_pages': 5,
-        'priority': 2  # Priority based on PRD
+        'priority': 2,
+        'wait_time': 5,
+        'scroll_enabled': True
     },
     'securityfarm': {
         'base_url': 'https://securityfarm.co.kr',
         'search_path': '/job',
         'selectors': {
-            'job_list': '.job-item',
-            'title': '.job-title',
-            'company': '.company-name',
-            'location': '.location',
-            'experience': '.experience',
-            'skills': '.skill',
-            'deadline': '.deadline',
-            'url': 'a'
+            'job_list': 'div, article, li, section',
+            'title': 'h1, h2, h3, h4, a, span',
+            'company': 'div, span, p, a',
+            'location': 'div, span, p',
+            'experience': 'div, span, p',
+            'skills': 'div, span, ul li',
+            'deadline': 'div, span, p',
+            'url': 'a',
+            'description': 'div, p, span'
         },
+        'exclude_keywords': ['로그인', '회원가입'],
+        'min_title_length': 2,
         'rate_limit': 2,
-        'max_pages': 5
+        'max_pages': 5,
+        'wait_time': 10,
+        'scroll_enabled': True
     }
 }
 

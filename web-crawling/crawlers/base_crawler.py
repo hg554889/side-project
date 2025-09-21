@@ -42,12 +42,51 @@ if not GEMINI_API_KEY:
 
 class BaseCrawler(ABC):
     """기본 크롤러 클래스"""
-    
+
     def __init__(self, site_name, site_config):
         self.site_name = site_name
         self.site_config = site_config
         self.logger = setup_logger(f"crawler_{site_name}")
         self.setup_driver()
+
+    def validate_job_data(self, job_data: dict) -> bool:
+        """채용공고 데이터 유효성 검증"""
+        if not job_data:
+            return False
+
+        title = job_data.get('title', '').strip()
+        company = job_data.get('company', '').strip()
+
+        # 기본 필수 필드 검증
+        if not title or not company:
+            return False
+
+        # 사이트별 제외 키워드 검증
+        exclude_keywords = self.site_config.get('exclude_keywords', [])
+        for keyword in exclude_keywords:
+            if keyword in title or keyword in company:
+                self.logger.debug(f"제외 키워드 발견: {keyword} in {title}")
+                return False
+
+        # 최소 제목 길이 검증
+        min_title_length = self.site_config.get('min_title_length', 3)
+        if len(title) < min_title_length:
+            self.logger.debug(f"제목이 너무 짧음: {title}")
+            return False
+
+        # 의심스러운 패턴 검증
+        suspicious_patterns = [
+            r'^[가-힣\s]{1,3}$',  # 너무 짧은 한글
+            r'^[.\s]+$',  # 점과 공백만
+            r'^[^가-힣a-zA-Z]+$',  # 한글/영문이 없는 경우
+        ]
+
+        for pattern in suspicious_patterns:
+            if re.match(pattern, title):
+                self.logger.debug(f"의심스러운 패턴: {title}")
+                return False
+
+        return True
         
     def setup_driver(self):
         """웹드라이버 초기화"""
@@ -66,7 +105,6 @@ class BaseCrawler(ABC):
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-plugins')
         options.add_argument('--disable-images')
-        options.add_argument('--disable-javascript')
         
         try:
             self.driver = webdriver.Chrome(options=options)

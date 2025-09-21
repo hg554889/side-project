@@ -13,6 +13,23 @@ class WorknetCrawler(BaseCrawler):
         self.base_url = SITES_CONFIG['worknet']['base_url']
         self.selectors = SITES_CONFIG['worknet']['selectors']
     
+    async def crawl(self, options=None):
+        """main.py에서 호출되는 메인 크롤링 메서드"""
+        if options is None:
+            options = {}
+
+        try:
+            # 기존 crawl_with_keyword 메서드 활용
+            keyword = options.get('keyword', 'React')
+            jobs = await self.crawl_with_keyword(keyword)
+
+            logger.info(f"워크넷 크롤링 완료: {len(jobs)}개")
+            return jobs
+
+        except Exception as e:
+            logger.error(f"워크넷 크롤링 실패: {e}")
+            raise
+
     async def crawl_with_keyword(self, keyword: str) -> list:
         max_jobs = 50
         
@@ -74,8 +91,34 @@ class WorknetCrawler(BaseCrawler):
     def extract_job_data(self, element):
         """개별 채용공고 데이터 추출"""
         try:
-            # 제목과 URL
-            title_elem = element.find_element(By.CSS_SELECTOR, '.cp-info-tit a')
+            # HTML 구조 디버깅
+            logger.info(f"워크넷 요소 HTML: {element.get_attribute('outerHTML')[:500]}...")
+
+            # 가능한 모든 a 태그 찾기
+            all_links = element.find_elements(By.TAG_NAME, 'a')
+            logger.info(f"워크넷 요소 내 a 태그 개수: {len(all_links)}")
+            for i, link in enumerate(all_links):
+                logger.info(f"워크넷 a태그 {i}: {link.get_attribute('href')} - {link.text[:50]}")
+
+            # 제목과 URL - 여러 셀렉터 시도
+            title_elem = None
+            selectors_to_try = [
+                'td.al_left.pd24 div div:nth-child(2) a',
+                'a[href*="/empDetailAuthView.do"]',
+                'a[href*="/empInfo/"]',
+                'a',
+                'td a'
+            ]
+
+            for selector in selectors_to_try:
+                try:
+                    title_elem = element.find_element(By.CSS_SELECTOR, selector)
+                    logger.info(f"워크넷 성공한 셀렉터: {selector}")
+                    break
+                except:
+                    logger.info(f"워크넷 실패한 셀렉터: {selector}")
+                    continue
+
             title = title_elem.text.strip() if title_elem else ''
             url = title_elem.get_attribute('href') if title_elem else ''
             

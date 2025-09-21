@@ -1,3 +1,4 @@
+import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from utils.logger import setup_logger
 
@@ -11,10 +12,13 @@ class MongoDBClient:
 
     def connect(self):
         try:
-            # MongoDB 연결 설정
-            self.client = AsyncIOMotorClient('mongodb://localhost:27017')
-            self.db = self.client['skillmap']
-            logger.info("MongoDB 연결 성공")
+            # MongoDB 연결 설정 (Docker 환경 지원)
+            mongo_uri = os.getenv('MONGODB_URI', 'mongodb://admin:skillmap123@localhost:27017/skillmap?authSource=admin')
+            db_name = os.getenv('MONGODB_DATABASE', 'skillmap')
+
+            self.client = AsyncIOMotorClient(mongo_uri)
+            self.db = self.client[db_name]
+            logger.info(f"MongoDB 연결 성공: {db_name}")
         except Exception as e:
             logger.error(f"MongoDB 연결 실패: {e}")
             raise
