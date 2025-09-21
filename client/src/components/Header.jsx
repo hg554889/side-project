@@ -28,6 +28,7 @@ const Header = () => {
     { label: '분석', path: '/analysis' },
     { label: '트렌드', path: '/trends' },
     { label: '비교', path: '/compare' },
+    { label: 'AI 챗봇', path: '/chat' }, // Added navigation item for ChatPage
   ];
 
   const handleNavigate = (path) => {
@@ -63,7 +64,9 @@ const Header = () => {
               role="button"
               aria-label="홈으로 이동"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleNavigate('/'); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') handleNavigate('/');
+              }}
               sx={{
                 width: 40,
                 height: 40,
@@ -73,7 +76,7 @@ const Header = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               <WorkIcon sx={{ fontSize: 24, color: 'white' }} />
@@ -85,7 +88,7 @@ const Header = () => {
                 fontWeight: 700,
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               SkillMap
@@ -105,11 +108,15 @@ const Header = () => {
                   py: 1.5,
                   fontWeight: 600,
                   fontSize: '15px',
-                  backgroundColor: isActive(item.path) ? 'var(--primary-color)' : 'transparent',
+                  backgroundColor: isActive(item.path)
+                    ? 'var(--primary-color)'
+                    : 'transparent',
                   color: isActive(item.path) ? 'white' : '#64748b',
                   boxShadow: 'none',
                   '&:hover': {
-                    backgroundColor: isActive(item.path) ? '#1d4ed8' : '#f1f5f9',
+                    backgroundColor: isActive(item.path)
+                      ? '#1d4ed8'
+                      : '#f1f5f9',
                     boxShadow: 'none',
                   },
                   transition: 'all 0.2s ease',
@@ -142,7 +149,7 @@ const Header = () => {
           sx: {
             width: 260,
             borderLeft: '1px solid #e2e8f0',
-          }
+          },
         }}
       >
         <Box sx={{ p: 2 }}>
@@ -161,7 +168,7 @@ const Header = () => {
                   sx={{
                     borderRadius: 1,
                     '&.Mui-selected': {
-                      backgroundColor: 'rgba(37,99,235,0.08)'
+                      backgroundColor: 'rgba(37,99,235,0.08)',
                     },
                   }}
                 >
@@ -169,7 +176,9 @@ const Header = () => {
                     primary={item.label}
                     primaryTypographyProps={{
                       fontWeight: isActive(item.path) ? 700 : 500,
-                      color: isActive(item.path) ? 'var(--primary-color)' : '#334155'
+                      color: isActive(item.path)
+                        ? 'var(--primary-color)'
+                        : '#334155',
                     }}
                   />
                 </ListItemButton>

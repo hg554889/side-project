@@ -14,6 +14,7 @@ import AdminPage from './pages/AdminPage';
 import ComparisonPage from './pages/ComparisonPage';
 import JobDetailPage from './pages/JobDetailPage';
 import LearningPathsPage from './pages/LearningPathsPage';
+import ChatPage from './pages/ChatPage';
 
 // Create custom MUI theme
 const theme = createTheme({
@@ -124,11 +125,13 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+          boxShadow:
+            '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
           borderRadius: 16,
           border: '1px solid rgba(226, 232, 240, 0.8)',
           '&:hover': {
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            boxShadow:
+              '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
             transform: 'translateY(-2px)',
           },
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -176,7 +179,8 @@ const theme = createTheme({
           backgroundImage: 'none',
         },
         elevation3: {
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          boxShadow:
+            '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         },
       },
     },
@@ -195,13 +199,21 @@ const AppContent = () => {
       }}
     >
       {/* Skip to content for keyboard users */}
-      <a href="#main" className="skip-link">본문으로 건너뛰기</a>
+      <a href="#main" className="skip-link">
+        본문으로 건너뛰기
+      </a>
 
       {/* Global Header */}
       <Header />
 
       {/* Main Content Area */}
-      <Box component="main" id="main" role="main" aria-label="메인 콘텐츠" sx={{ flex: 1, pb: { xs: 8, md: 4 } }}>
+      <Box
+        component="main"
+        id="main"
+        role="main"
+        aria-label="메인 콘텐츠"
+        sx={{ flex: 1, pb: { xs: 8, md: 4 } }}
+      >
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
@@ -211,6 +223,7 @@ const AppContent = () => {
           <Route path="/jobs/:id" element={<JobDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/learning-paths" element={<LearningPathsPage />} />
+          <Route path="/chat" element={<ChatPage />} />
           {/* 추후 추가될 라우트들 */}
         </Routes>
       </Box>
