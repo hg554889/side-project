@@ -21,6 +21,7 @@ python-dotenv
 colorlog
 webdriver-manager
 loguru
+tqdm
 
 # AI/ML
 google-generativeai

@@ -6,6 +6,7 @@ from crawlers.saramin_crawler import SaraminCrawler
 from crawlers.comento_crawler import ComentoCrawler
 from crawlers.worknet_crawler import WorknetCrawler
 from crawlers.securityfarm_crawler import SecurityfarmCrawler
+from processors.data_normalizer import DataNormalizer
 from database.mongodb_connector import mongodb_connector
 from utils.logger import setup_logger
 
@@ -60,8 +61,12 @@ async def main():
     crawled_jobs = await run_crawlers(sites_to_crawl, keywords_to_search)
 
     if crawled_jobs:
-        logger.info("Sending crawled jobs to the server...")
-        await mongodb_connector.send_jobs_to_server(crawled_jobs)
+        logger.info(f"{len(crawled_jobs)}개의 원본 데이터를 정규화합니다...")
+        normalizer = DataNormalizer()
+        normalized_jobs = [await normalizer.normalize(job) for job in crawled_jobs]
+        
+        logger.info("Sending normalized jobs to the server...")
+        await mongodb_connector.send_jobs_to_server(normalized_jobs)
     else:
         logger.info("No jobs were crawled.")
 

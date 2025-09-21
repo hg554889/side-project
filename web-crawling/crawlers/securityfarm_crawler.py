@@ -64,6 +64,10 @@ class SecurityfarmCrawler(BaseCrawler):
                     time.sleep(2)
                 self.driver.execute_script("window.scrollTo(0, 0);")
                 time.sleep(2)
+
+            # Save page source for debugging
+            with open("securityfarm_page_source.html", "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
             
             # 채용공고 리스트 대기
             job_list_element = await self.wait_and_find_element(By.CSS_SELECTOR, self.selectors['job_list'])
@@ -71,8 +75,8 @@ class SecurityfarmCrawler(BaseCrawler):
                 logger.warning("시큐리티팜: 채용공고 목록을 찾을 수 없습니다.")
                 return jobs
             
-            # 모든 채용공고 요소 찾기
-            job_elements = self.driver.find_elements(By.CSS_SELECTOR, self.selectors['job_list'])
+            # 모든 채용공고 요소 찾기 (정확한 선택자로 수정)
+            job_elements = self.driver.find_elements(By.CSS_SELECTOR, 'div.shadow-card-sm')
             logger.info(f"시큐리티팜: {len(job_elements)}개 채용공고 발견")
             
             for i, element in enumerate(job_elements[:max_jobs]):
@@ -105,137 +109,47 @@ class SecurityfarmCrawler(BaseCrawler):
         return jobs
     
     def extract_job_data(self, element):
-        """개별 채용공고 데이터 추출"""
+        """개별 채용공고 데이터 추출 (Securityfarm 사이트 맞춤)"""
         try:
-            # 요소의 텍스트 내용 확인
-            element_text = element.text.strip()
-            if not element_text or len(element_text) < 10:
-                return None
+            data = {}
 
-            # 키워드 필터링 제거 - 모든 데이터 수집 후 2차 가공
+            # URL 정보는 직접적인 href가 없어 클릭 후 가져와야 하지만, 우선 비워둡니다.
+            data['url'] = ''
 
-            # URL 추출 시도 (여러 방법)
-            url = ''
+            # 제목 추출
             try:
-                url_elem = element.find_element(By.CSS_SELECTOR, 'a')
-                url = url_elem.get_attribute('href') if url_elem else ''
-            except:
-                # 링크가 없어도 계속 진행
+                data['title'] = element.find_element(By.CSS_SELECTOR, 'span.text-base.sm\:text-lg').text.strip()
+            except NoSuchElementException:
+                data['title'] = ''
+
+            # 회사명 추출
+            try:
+                data['company'] = element.find_element(By.CSS_SELECTOR, 'span.text-sm.sm\:text-base.text-neutral-700').text.strip()
+            except NoSuchElementException:
+                data['company'] = ''
+
+            # 위치 및 경력 정보 추출
+            data['location'] = ''
+            data['experience'] = ''
+            try:
+                details = element.find_elements(By.CSS_SELECTOR, 'div.flex.flex-row.items-center.gap-1.text-gray-600')
+                if len(details) > 0:
+                    data['location'] = details[0].text.strip()
+                if len(details) > 1:
+                    data['experience'] = details[1].text.strip()
+            except NoSuchElementException:
                 pass
-            
-            # 제목 - 텍스트에서 직접 추출
-            title = ''
 
-            # 첫 번째 시도: 구체적인 셀렉터들
-            title_selectors = [
-                'h1', 'h2', 'h3', 'h4', 'h5',
-                '.job-title', '.position-title', '.title',
-                '[class*="title"]', '[class*="position"]',
-                'strong', 'b', '.font-bold', '.font-medium'
-            ]
+            # 마감일 추출
+            try:
+                data['deadline'] = element.find_element(By.CSS_SELECTOR, 'span.text-red-500, span.text-emerald-700').text.strip()
+            except NoSuchElementException:
+                data['deadline'] = ''
 
-            for selector in title_selectors:
-                try:
-                    title_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    title = title_elem.text.strip()
-                    if title and len(title) > 3:  # 최소 4글자 이상
-                        break
-                except NoSuchElementException:
-                    continue
+            data['tags'] = []
 
-            # 제목을 찾지 못했으면 텍스트에서 첫 번째 줄 사용
-            if not title and element_text:
-                lines = element_text.split('\n')
-                for line in lines:
-                    line = line.strip()
-                    if line and len(line) > 3 and '채용' not in line:
-                        # 채용이라는 단어가 없고 의미있는 길이의 첫 번째 줄을 제목으로 사용
-                        title = line
-                        break
-            
-            # 회사명 - 여러 선택자 시도
-            company = ''
-            company_selectors = ['.company-name', '.corp-name', '.company', '.corp', '.employer']
-            for selector in company_selectors:
-                try:
-                    company_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    company = company_elem.text.strip()
-                    if company:
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            # 위치 정보
-            location = ''
-            location_selectors = ['.location', '.area', '.job-location', '.place', '.region']
-            for selector in location_selectors:
-                try:
-                    location_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    location = location_elem.text.strip()
-                    if location:
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            # 경력 정보
-            experience = ''
-            exp_selectors = ['.experience', '.career', '.job-experience', '.exp', '.경력']
-            for selector in exp_selectors:
-                try:
-                    exp_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    experience = exp_elem.text.strip()
-                    if experience:
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            # 급여 정보
-            salary = ''
-            salary_selectors = ['.salary', '.pay', '.job-salary', '.wage', '.연봉']
-            for selector in salary_selectors:
-                try:
-                    salary_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    salary = salary_elem.text.strip()
-                    if salary:
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            # 마감일
-            deadline = ''
-            deadline_selectors = ['.deadline', '.date', '.job-date', '.due-date', '.마감일']
-            for selector in deadline_selectors:
-                try:
-                    deadline_elem = element.find_element(By.CSS_SELECTOR, selector)
-                    deadline = deadline_elem.text.strip()
-                    if deadline:
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            # 기술 태그
-            tags = []
-            tag_selectors = ['.skill', '.tag', '.keyword', '.tech', '.기술']
-            for selector in tag_selectors:
-                try:
-                    tag_elements = element.find_elements(By.CSS_SELECTOR, selector)
-                    if tag_elements:
-                        tags = [tag.text.strip() for tag in tag_elements if tag.text.strip()]
-                        break
-                except NoSuchElementException:
-                    continue
-            
-            return {
-                'title': title,
-                'company': company,
-                'location': location,
-                'experience': experience,
-                'salary': salary,
-                'deadline': deadline,
-                'url': url,
-                'tags': tags
-            }
-            
+            return data
+
         except Exception as e:
             logger.warning(f"시큐리티팜: 데이터 추출 실패 - {e}")
             return None

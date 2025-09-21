@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+.dockerignore
+
+# Node
+node_modules
+npm-debug.log
+client/dist
+client/node_modules
+server/node_modules
+
+# Python
+.venv
+__pycache__
+*.pyc
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+logs
+*.log
+comento_page_source.html
+securityfarm_page_source.html
