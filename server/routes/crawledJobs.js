@@ -293,42 +293,6 @@ router.get('/jobs/stats', async (req, res) => {
   try {
     const stats = await CrawledJob.getStats();
 
-    // Additional statistics
-    // const [categoryStats, sourceStats, qualityStats] = await Promise.all([
-    //   // Jobs by category
-    //   CrawledJob.aggregate([
-    //     { $match: { is_active: true } },
-    //     { $group: { _id: '$job_category', count: { $sum: 1 } } },
-    //     { $sort: { count: -1 } },
-    //   ]),
-
-    //   // Jobs by source site
-    //   CrawledJob.aggregate([
-    //     { $match: { is_active: true } },
-    //     { $group: { _id: '$source_site', count: { $sum: 1 } } },
-    //     { $sort: { count: -1 } },
-    //   ]),
-
-    //   // Quality distribution
-    //   CrawledJob.aggregate([
-    //     { $match: { is_active: true } },
-    //     {
-    //       $group: {
-    //         _id: {
-    //           $switch: {
-    //             branches: [
-    //               { case: { $gte: ['$quality_score', 0.8] }, then: 'high' },
-    //               { case: { $gte: ['$quality_score', 0.5] }, then: 'medium' },
-    //             ],
-    //             default: 'low',
-    //           },
-    //         },
-    //         count: { $sum: 1 },
-    //       },
-    //     },
-    //   ]),
-    // ]);
-
     res.json({
       success: true,
       data: {
