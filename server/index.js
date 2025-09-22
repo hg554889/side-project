@@ -17,6 +17,7 @@ const jobRoutes = require('./routes/jobs');
 const analysisRoutes = require('./routes/analysis');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chatRoutes');
+const crawledJobRoutes = require('./routes/crawledJobs');
 
 // Import database connection
 const { connectDB } = require('./config/Database');
@@ -26,6 +27,25 @@ const PORT = process.env.PORT || 3000;
 
 // Connect to database
 connectDB();
+
+// Auto-seed data if database is empty (development only)
+if (process.env.NODE_ENV !== 'production') {
+  setTimeout(async () => {
+    try {
+      const CrawledJob = require('./models/CrawledJob');
+      const jobCount = await CrawledJob.countDocuments();
+
+      if (jobCount === 0) {
+        console.log('📊 Database is empty, seeding test data...');
+        const { seedTestData } = require('./utils/seedTestData');
+        await seedTestData();
+        console.log('🌱 Auto-seeding completed!');
+      }
+    } catch (error) {
+      console.log('⚠️ Auto-seeding skipped:', error.message);
+    }
+  }, 2000); // Wait 2 seconds for DB connection
+}
 
 // Security middleware
 app.use(
@@ -43,29 +63,33 @@ app.use(
   })
 );
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later',
-    retryAfter: '15 minutes',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api/', limiter);
+// Rate limiting (disabled in development)
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: {
+      error: 'Too many requests from this IP, please try again later',
+      retryAfter: '15 minutes',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/', limiter);
 
-// API specific rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20, // Limit each IP to 20 API requests per minute
-  message: {
-    error: 'API rate limit exceeded, please slow down',
-    retryAfter: '1 minute',
-  },
-});
-app.use('/api/analysis', apiLimiter);
+  // API specific rate limiting
+  const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 20, // Limit each IP to 20 API requests per minute
+    message: {
+      error: 'API rate limit exceeded, please slow down',
+      retryAfter: '1 minute',
+    },
+  });
+  app.use('/api/analysis', apiLimiter);
+} else {
+  console.log('🚫 Rate limiting disabled in development environment');
+}
 
 // Basic middleware
 app.use(compression());
@@ -109,6 +133,9 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+console.log('🔧 Loading crawled job routes...');
+app.use('/api/crawled', crawledJobRoutes);
+console.log('✅ Crawled job routes loaded');
 
 // API health check
 app.get('/api/health', async (req, res) => {

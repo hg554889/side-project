@@ -3,7 +3,7 @@ import { Container, Box, Alert, Snackbar } from '@mui/material';
 import { useApp } from '../contexts/AppContext';
 import FloatingSettings from '../components/FloatingSettings';
 import ResultsSection from '../components/ResultsSection';
-import { mockAnalysisResults } from '../utils/mockData';
+import { SkillMapAPI } from '../services/api';
 
 const AnalysisPage = () => {
   const { state, actions } = useApp();
@@ -75,9 +75,14 @@ const AnalysisPage = () => {
         }
       }
 
-      // Set mock results (in real app, this would be API call)
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      actions.setAnalysisResults(mockAnalysisResults);
+      // 실제 분석 API 호출
+      const analysisResult = await SkillMapAPI.startAnalysis({
+        jobCategory: state.analysisSettings.jobCategory,
+        experienceLevel: state.analysisSettings.experienceLevel,
+        region: state.analysisSettings.region
+      });
+
+      actions.setAnalysisResults([analysisResult]);
 
       // Success notification
       setSnackbar({

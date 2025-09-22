@@ -21,7 +21,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
-import { jobCategories, filterOptions } from '../utils/mockData';
+import { defaultJobCategories, defaultFilterOptions } from '../utils/dynamicData';
 
 const FloatingSettings = ({
   onStartAnalysis,
@@ -53,9 +53,9 @@ const FloatingSettings = ({
   const getSubcategories = () => {
     if (
       state.analysisSettings.jobCategory &&
-      jobCategories[state.analysisSettings.jobCategory]
+      defaultJobCategories[state.analysisSettings.jobCategory]
     ) {
-      return jobCategories[state.analysisSettings.jobCategory].subcategories;
+      return defaultJobCategories[state.analysisSettings.jobCategory].subcategories;
     }
     return [];
   };
@@ -277,14 +277,14 @@ const FloatingSettings = ({
                         직군을 선택하세요
                       </Typography>
                     </MenuItem>
-                    {Object.keys(jobCategories).map((category) => (
+                    {Object.keys(defaultJobCategories).map((category) => (
                       <MenuItem key={category} value={category} sx={{ py: 1.5, fontSize: '16px' }}>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                             {category}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#64748b' }}>
-                            {jobCategories[category].subcategories.slice(0, 3).join(', ')} 등
+                            {defaultJobCategories[category].subcategories.slice(0, 3).join(', ')} 등
                           </Typography>
                         </Box>
                       </MenuItem>
@@ -359,7 +359,7 @@ const FloatingSettings = ({
                         경험 수준을 선택하세요
                       </Typography>
                     </MenuItem>
-                    {filterOptions.experienceLevel
+                    {defaultFilterOptions.experienceLevel
                       .filter((opt) => opt.value)
                       .map((option) => (
                         <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
@@ -522,7 +522,7 @@ const FloatingSettings = ({
                         기업 규모를 선택하세요
                       </Typography>
                     </MenuItem>
-                    {filterOptions.companySize.map((option) => (
+                    {defaultFilterOptions.companySize.map((option) => (
                       <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>

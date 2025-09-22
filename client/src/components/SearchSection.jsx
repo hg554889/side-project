@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TextField,
   Button,
@@ -20,12 +20,28 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
-import { filterOptions } from '../utils/mockData';
+import { defaultFilterOptions, getPopularKeywords } from '../utils/dynamicData';
 
 const SearchSection = () => {
   const { state, actions } = useApp();
   const [searchFocused, setSearchFocused] = useState(false);
   const [filterExpanded, setFilterExpanded] = useState(false);
+  const [popularKeywords, setPopularKeywords] = useState([]);
+
+  // 인기 키워드 로딩
+  useEffect(() => {
+    const loadPopularKeywords = async () => {
+      try {
+        const keywords = await getPopularKeywords();
+        setPopularKeywords(keywords);
+      } catch (error) {
+        // 에러 시 기본 키워드 사용
+        setPopularKeywords(['React', 'JavaScript', 'Python', 'Java', 'AWS', 'Docker']);
+      }
+    };
+
+    loadPopularKeywords();
+  }, []);
 
   const handleSearchChange = (event) => {
     actions.setSearchQuery(event.target.value);
@@ -47,17 +63,10 @@ const SearchSection = () => {
     );
   };
 
-  // 인기 키워드들
-  const popularKeywords = [
-    'React',
-    'JavaScript',
-    '마케팅',
-    'UI/UX',
-    'Python',
-    '기획',
-    'SQL',
-    '디자인',
-  ];
+  // 키워드 클릭 핸들러
+  const handleKeywordClick = (keyword) => {
+    actions.setSearchQuery(keyword);
+  };
 
   return (
     <Box sx={{ mb: 6 }}>
@@ -183,7 +192,7 @@ const SearchSection = () => {
                 variant={
                   state.searchQuery === keyword ? 'contained' : 'text'
                 }
-                onClick={() => actions.setSearchQuery(keyword)}
+                onClick={() => handleKeywordClick(keyword)}
                 aria-label={`${keyword}로 검색`}
                 sx={{
                   borderRadius: 2,
@@ -380,7 +389,7 @@ const SearchSection = () => {
                           경험 수준을 선택하세요
                         </Typography>
                       </MenuItem>
-                      {filterOptions.experienceLevel.map((option) => (
+                      {defaultFilterOptions.experienceLevel.map((option) => (
                         <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -465,7 +474,7 @@ const SearchSection = () => {
                           지역을 선택하세요
                         </Typography>
                       </MenuItem>
-                      {filterOptions.region.map((option) => (
+                      {defaultFilterOptions.region.map((option) => (
                         <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>
                             {option.label}
@@ -543,7 +552,7 @@ const SearchSection = () => {
                           기업 규모를 선택하세요
                         </Typography>
                       </MenuItem>
-                      {filterOptions.companySize.map((option) => (
+                      {defaultFilterOptions.companySize.map((option) => (
                         <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontSize: '16px' }}>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>

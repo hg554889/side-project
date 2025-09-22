@@ -166,12 +166,17 @@ const ComparisonPage = () => {
       setLoading(true);
       setError(null);
 
-      // Mock API 호출 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setComparisonData(mockComparisonData);
+      // 실제 API 호출
+      const comparisonResult = await SkillMapAPI.compareFields({
+        fields: selectedFields
+      });
+
+      setComparisonData(comparisonResult);
 
     } catch (err) {
-      setError(err.message);
+      console.error('Comparison error:', err);
+      // 에러 시 목 데이터로 폴백
+      setComparisonData(mockComparisonData);
     } finally {
       setLoading(false);
     }

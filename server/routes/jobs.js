@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const jobService = require('../services/jobService');
 const { validateJobQuery, validateJobSearch } = require('../utils/validators');
+const CrawledJob = require('../models/CrawledJob');
+const {
+  convertCrawledJobsToLegacy,
+  convertLegacyFiltersToCrawled,
+  createLegacyPaginationResponse
+} = require('../utils/dataAdapter');
 
 /**
  * @route   GET /api/jobs
@@ -17,48 +23,80 @@ router.get('/', async (req, res, next) => {
       experienceLevel,
       region,
       companySize,
-      sortBy = 'crawledAt',
+      search,
+      sortBy = 'scraped_at',
       sortOrder = 'desc',
     } = req.query;
 
-    // Validate query parameters
-    const { error } = validateJobQuery(req.query);
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.details[0].message,
-      });
+    // Build query for crawled jobs
+    const query = { is_active: true };
+
+    // Convert legacy filters to crawled format
+    const legacyFilters = { jobCategory, experienceLevel, region, companySize };
+    const crawledFilters = convertLegacyFiltersToCrawled(legacyFilters);
+
+    // Apply filters
+    if (crawledFilters.job_category) {
+      query.job_category = { $regex: crawledFilters.job_category, $options: 'i' };
     }
 
-    const filters = {
-      ...(jobCategory && { jobCategory }),
-      ...(experienceLevel && { experienceLevel }),
-      ...(region && { region }),
-      ...(companySize && { companySize }),
+    if (crawledFilters.experience_level) {
+      query.experience_level = crawledFilters.experience_level;
+    }
+
+    if (crawledFilters.location || region) {
+      const locationQuery = crawledFilters.location || region;
+      query.work_location = { $regex: locationQuery, $options: 'i' };
+    }
+
+    // Search functionality
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    // Pagination
+    const pageNum = parseInt(page);
+    const limitNum = Math.min(parseInt(limit), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Sort configuration
+    const sortConfig = {};
+    sortConfig[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const [crawledJobs, totalCount] = await Promise.all([
+      CrawledJob.find(query)
+        .sort(sortConfig)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      CrawledJob.countDocuments(query),
+    ]);
+
+    // Convert to legacy format
+    const legacyJobs = convertCrawledJobsToLegacy(crawledJobs);
+
+    // Calculate pagination
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const pagination = {
+      currentPage: pageNum,
+      totalPages,
+      totalItems: totalCount,
+      hasNext: pageNum < totalPages,
+      hasPrev: pageNum > 1,
     };
 
-    const options = {
-      page: parseInt(page),
-      limit: Math.min(parseInt(limit), 100), // Max 100 items per page
-      sortBy,
-      sortOrder,
-    };
+    // Return in legacy format
+    const response = createLegacyPaginationResponse(legacyJobs, pagination);
+    res.json(response);
 
-    const result = await jobService.getJobs(filters, options);
-
-    res.json({
-      success: true,
-      data: result.jobs,
-      pagination: {
-        currentPage: result.currentPage,
-        totalPages: result.totalPages,
-        totalJobs: result.totalJobs,
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev,
-      },
-    });
   } catch (error) {
-    next(error);
+    console.error('Error in /api/jobs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs',
+      message: error.message
+    });
   }
 });
 
@@ -71,15 +109,6 @@ router.get('/search', async (req, res, next) => {
   try {
     const { q: searchText, page = 1, limit = 20, ...filters } = req.query;
 
-    // Validate search parameters
-    const { error } = validateJobSearch(req.query);
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.details[0].message,
-      });
-    }
-
     if (!searchText || searchText.trim().length < 2) {
       return res.status(400).json({
         success: false,
@@ -87,35 +116,69 @@ router.get('/search', async (req, res, next) => {
       });
     }
 
-    const options = {
-      page: parseInt(page),
-      limit: Math.min(parseInt(limit), 100),
+    // Build search query
+    const query = {
+      is_active: true,
+      $text: { $search: searchText.trim() }
     };
 
-    const result = await jobService.searchJobs(
-      searchText.trim(),
-      filters,
-      options
-    );
+    // Apply additional filters
+    const crawledFilters = convertLegacyFiltersToCrawled(filters);
+    if (crawledFilters.job_category) {
+      query.job_category = { $regex: crawledFilters.job_category, $options: 'i' };
+    }
+    if (crawledFilters.experience_level) {
+      query.experience_level = crawledFilters.experience_level;
+    }
+
+    // Pagination
+    const pageNum = parseInt(page);
+    const limitNum = Math.min(parseInt(limit), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    const startTime = Date.now();
+
+    // Execute search with text score
+    const [crawledJobs, totalCount] = await Promise.all([
+      CrawledJob.find(query, { score: { $meta: 'textScore' } })
+        .sort({ score: { $meta: 'textScore' }, scraped_at: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      CrawledJob.countDocuments(query),
+    ]);
+
+    const searchTime = Date.now() - startTime;
+
+    // Convert to legacy format
+    const legacyJobs = convertCrawledJobsToLegacy(crawledJobs);
+
+    // Calculate pagination
+    const totalPages = Math.ceil(totalCount / limitNum);
 
     res.json({
       success: true,
-      data: result.jobs,
+      data: legacyJobs,
       searchInfo: {
         query: searchText,
-        totalResults: result.totalJobs,
-        searchTime: result.searchTime,
+        totalResults: totalCount,
+        searchTime: `${searchTime}ms`,
       },
       pagination: {
-        currentPage: result.currentPage,
-        totalPages: result.totalPages,
-        totalJobs: result.totalJobs,
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev,
+        currentPage: pageNum,
+        totalPages,
+        totalJobs: totalCount,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
       },
     });
   } catch (error) {
-    next(error);
+    console.error('Error in /api/jobs/search:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Search failed',
+      message: error.message
+    });
   }
 });
 
@@ -128,21 +191,37 @@ router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const job = await jobService.getJobById(id);
+    // Try to find by crawled job ID first
+    const crawledJob = await CrawledJob.findOne({
+      $or: [
+        { id: id },
+        { _id: id }
+      ],
+      is_active: true
+    }).lean();
 
-    if (!job) {
+    if (!crawledJob) {
       return res.status(404).json({
         success: false,
         error: 'Job posting not found',
       });
     }
 
+    // Convert to legacy format
+    const { convertCrawledJobToLegacy } = require('../utils/dataAdapter');
+    const legacyJob = convertCrawledJobToLegacy(crawledJob);
+
     res.json({
       success: true,
-      data: job,
+      data: legacyJob,
     });
   } catch (error) {
-    next(error);
+    console.error('Error in /api/jobs/:id:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch job',
+      message: error.message
+    });
   }
 });
 
@@ -153,11 +232,16 @@ router.get('/:id', async (req, res, next) => {
  */
 router.get('/stats/overview', async (req, res, next) => {
   try {
-    const stats = await jobService.getJobStats();
+    // Get stats from crawled jobs
+    const stats = await CrawledJob.getStats();
+    const { convertStatsToLegacy } = require('../utils/dataAdapter');
+
+    // Convert to legacy format
+    const legacyStats = convertStatsToLegacy({ overview: stats });
 
     res.json({
       success: true,
-      data: stats,
+      data: legacyStats,
     });
   } catch (error) {
     next(error);

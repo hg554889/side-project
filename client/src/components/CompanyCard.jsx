@@ -27,30 +27,39 @@ const CompanyCard = ({ company, onClick }) => {
     }
   };
 
-  const getCompanySizeColor = (size) => {
-    switch (size) {
-      case '대기업':
-        return '#1976d2';
-      case '중견기업':
-        return '#4caf50';
-      case '스타트업':
-        return '#ff9800';
+  const getSourceColor = (source) => {
+    switch (source) {
+      case 'saramin':
+        return '#4CAF50';
+      case 'worknet':
+        return '#2196F3';
+      case 'comento':
+        return '#FF9800';
+      case 'securityfarm':
+        return '#F44336';
       default:
         return '#757575';
     }
   };
 
-  const getCompanySizeIcon = (size) => {
-    switch (size) {
-      case '대기업':
-        return '🏢';
-      case '중견기업':
-        return '🏬';
-      case '스타트업':
-        return '🚀';
-      default:
+  const getSourceIcon = (source) => {
+    switch (source) {
+      case 'saramin':
         return '💼';
+      case 'worknet':
+        return '🏛️';
+      case 'comento':
+        return '🎓';
+      case 'securityfarm':
+        return '🔒';
+      default:
+        return '📝';
     }
+  };
+
+  const formatSalary = (salaryRange) => {
+    if (!salaryRange) return '협의';
+    return salaryRange;
   };
 
   return (
@@ -84,7 +93,7 @@ const CompanyCard = ({ company, onClick }) => {
           right: 0,
           width: '60px',
           height: '60px',
-          background: `linear-gradient(45deg, ${getCompanySizeColor(company.companySize)}20, transparent)`,
+          background: `linear-gradient(45deg, ${getSourceColor(company.source_site)}20, transparent)`,
           borderRadius: '0 0 0 60px',
           display: 'flex',
           alignItems: 'flex-start',
@@ -93,7 +102,7 @@ const CompanyCard = ({ company, onClick }) => {
         }}
       >
         <Typography sx={{ fontSize: '16px' }}>
-          {getCompanySizeIcon(company.companySize)}
+          {getSourceIcon(company.source_site)}
         </Typography>
       </Box>
 
@@ -114,7 +123,7 @@ const CompanyCard = ({ company, onClick }) => {
               sx={{
                 width: 24,
                 height: 24,
-                bgcolor: getCompanySizeColor(company.companySize),
+                bgcolor: getSourceColor(company.source_site),
                 fontSize: '12px',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
               }}
@@ -130,7 +139,7 @@ const CompanyCard = ({ company, onClick }) => {
                 lineHeight: 1.2,
               }}
             >
-              {company.name}
+              {company.company_name}
             </Typography>
           </Box>
 
@@ -144,7 +153,7 @@ const CompanyCard = ({ company, onClick }) => {
               lineHeight: 1.3,
             }}
           >
-            {company.position}
+            {company.title}
           </Typography>
         </Box>
 
@@ -159,7 +168,7 @@ const CompanyCard = ({ company, onClick }) => {
               overflow: 'hidden',
             }}
           >
-            {company.skills.slice(0, 3).map((skill, index) => (
+            {(company.keywords || []).slice(0, 3).map((skill, index) => (
               <Chip
                 key={index}
                 label={skill}
@@ -179,9 +188,9 @@ const CompanyCard = ({ company, onClick }) => {
                 }}
               />
             ))}
-            {company.skills.length > 3 && (
+            {(company.keywords || []).length > 3 && (
               <Chip
-                label={`+${company.skills.length - 3}`}
+                label={`+${(company.keywords || []).length - 3}`}
                 size="small"
                 variant="filled"
                 sx={{
@@ -217,7 +226,7 @@ const CompanyCard = ({ company, onClick }) => {
                 fontWeight: 500,
               }}
             >
-              {company.region}
+              {company.work_location || '지역미상'}
             </Typography>
           </Box>
 
@@ -231,7 +240,7 @@ const CompanyCard = ({ company, onClick }) => {
                 fontWeight: 600,
               }}
             >
-              {company.experienceLevel}
+              {formatSalary(company.salary_range)}
             </Typography>
           </Box>
         </Box>

@@ -1,39 +1,92 @@
 services:
-  crawler:
-    build: .
-    env_file:
-      - ./.env
+  # MongoDB 데이터베이스 (web-crawling과 공유)
+  mongodb:
+    image: mongo:7.0
+    container_name: skillmap-mongodb
+    restart: unless-stopped
     environment:
-      - CHROMEDRIVER_PATH=/usr/bin/chromedriver
-      - SERVER_API_URL=http://server:3000
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-    depends_on:
-      - redis
-      - server
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: skillmap123
+      MONGO_INITDB_DATABASE: skillmap
+    ports:
+      - "27017:27017"
     volumes:
-      - ./logs:/usr/src/app/logs
-      - ./web-crawling:/usr/src/app/web-crawling
+      - mongodb_data:/data/db
+      - ./web-crawling/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     networks:
       - crawler_net
 
+  # 웹 크롤러 서비스
+  crawler:
+    build:
+      context: ./web-crawling
+      dockerfile: Dockerfile
+    container_name: skillmap-crawler
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - server
+    environment:
+      - MONGODB_URI=mongodb://admin:skillmap123@mongodb:27017/skillmap?authSource=admin
+      - PYTHONPATH=/app
+      - CHROMEDRIVER_PATH=/usr/bin/chromedriver
+      - SERVER_API_URL=http://server:3000
+    volumes:
+      - ./web-crawling/logs:/app/logs
+      - ./web-crawling/output:/app/output
+    networks:
+      - crawler_net
+    # 크롤링 실행 명령어 (필요에 따라 수정)
+    command: >
+      sh -c "
+        echo '=== SkillMap 크롤링 시스템 시작 ===' &&
+        python main.py --sites saramin,worknet_new,comento,securityfarm --keyword React --output /app/output/crawl_results.json &&
+        echo '=== 크롤링 완료! ===' &&
+        tail -f /dev/null
+      "
+
+  # Node.js 서버 (MongoDB 연결 추가)
   server:
     build:
       context: .
       dockerfile: server/Dockerfile
+    container_name: skillmap-server
+    restart: unless-stopped
+    depends_on:
+      - mongodb
     env_file:
       - ./.env
+    environment:
+      - MONGODB_URI=mongodb://admin:skillmap123@mongodb:27017/skillmap?authSource=admin
+      - NODE_ENV=production
     ports:
       - "3000:3000"
     networks:
       - crawler_net
-  
+
+  # MongoDB 관리 UI (선택사항)
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: skillmap-mongo-ui
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: skillmap123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:skillmap123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: skillmap123
+    networks:
+      - crawler_net
+
+  # Redis (기존 유지)
   redis:
     image: redis:alpine
+    container_name: skillmap-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -43,6 +96,7 @@ services:
 
 volumes:
   redis_data:
+  mongodb_data:
 
 networks:
   crawler_net:

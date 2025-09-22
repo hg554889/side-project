@@ -62,6 +62,76 @@ const JobDetailPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [applicationDialog, setApplicationDialog] = useState(false);
 
+  // 크롤링 데이터를 화면에 표시할 형태로 변환하는 함수
+  const transformCrawledDataToJobDetail = (crawledData) => {
+    const parseRequirements = (requirements) => {
+      if (!requirements) return [];
+      return requirements.split('\n').filter(req => req.trim().length > 0);
+    };
+
+    const parseBenefits = (benefits) => {
+      if (!benefits) return [];
+      return benefits.split('\n').filter(benefit => benefit.trim().length > 0);
+    };
+
+    const parseSalaryRange = (salaryRange) => {
+      if (!salaryRange) return { min: 0, max: 0, negotiable: true };
+
+      const match = salaryRange.match(/(\d+)-(\d+)/);
+      if (match) {
+        return {
+          min: parseInt(match[1]),
+          max: parseInt(match[2]),
+          negotiable: true
+        };
+      }
+      return { min: 0, max: 0, negotiable: true };
+    };
+
+    const salary = parseSalaryRange(crawledData.salary_range);
+
+    return {
+      id: crawledData.id,
+      company: {
+        name: crawledData.company_name,
+        logo: '/logos/default.png',
+        size: '기업',
+        industry: crawledData.job_category || 'IT서비스',
+        foundedYear: 2000,
+        employees: '정보 없음',
+        website: crawledData.source_url || '#',
+      },
+      position: crawledData.title,
+      department: '개발팀',
+      location: crawledData.work_location || '위치 미상',
+      workType: '정규직',
+      experience: crawledData.experience_level || '경력무관',
+      education: '학사 이상',
+      salary: {
+        min: salary.min,
+        max: salary.max,
+        negotiable: salary.negotiable,
+        benefits: crawledData.salary_range ? [crawledData.salary_range] : ['협의 후 결정'],
+      },
+      skills: {
+        required: crawledData.keywords ? crawledData.keywords.slice(0, 4) : [],
+        preferred: crawledData.keywords ? crawledData.keywords.slice(4, 8) : [],
+        tools: ['Git', 'IDE', 'Browser'],
+      },
+      responsibilities: crawledData.description ?
+        [crawledData.description] :
+        ['채용공고 상세 업무 내용을 확인해 주세요.'],
+      requirements: parseRequirements(crawledData.requirements),
+      benefits: parseBenefits(crawledData.benefits),
+      culture: ['협업 중시', '성장 지향', '워라밸'],
+      applicationProcess: ['서류전형', '면접', '최종합격'],
+      postedDate: crawledData.scraped_at ? new Date(crawledData.scraped_at).toISOString().split('T')[0] : '2024-01-15',
+      deadline: '2024-12-31', // 기본 마감일
+      views: Math.floor(Math.random() * 2000) + 100,
+      applicants: Math.floor(Math.random() * 100) + 10,
+    };
+  };
+
   // Mock 상세 채용공고 데이터
   const mockJobDetail = {
     id: parseInt(id),
@@ -166,12 +236,46 @@ const JobDetailPage = () => {
     const fetchJobDetail = async () => {
       try {
         setLoading(true);
-        // Mock API 호출
-        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 실제 API 호출
+        const [jobDetail, allJobs] = await Promise.all([
+          SkillMapAPI.getJobDetail(id),
+          SkillMapAPI.getJobs({ limit: 10 })
+        ]);
+
+        if (jobDetail) {
+          // 크롤링 데이터를 화면에 표시할 형태로 변환
+          const transformedJobData = transformCrawledDataToJobDetail(jobDetail);
+          setJobData(transformedJobData);
+
+          // 유사한 채용공고 찾기 (같은 키워드를 가진 채용공고들)
+          const similar = allJobs
+            .filter(job =>
+              job.id !== id &&
+              job.keywords &&
+              jobDetail.keywords &&
+              job.keywords.some(keyword => jobDetail.keywords.includes(keyword))
+            )
+            .slice(0, 3)
+            .map(job => ({
+              id: job.id,
+              company: job.company_name,
+              position: job.title,
+              location: job.work_location || '위치 미상',
+              salary: job.salary_range || '협의',
+              skills: job.keywords ? job.keywords.slice(0, 3) : [],
+              postedDate: job.scraped_at
+            }));
+
+          setSimilarJobs(similar);
+        } else {
+          setError('채용공고를 찾을 수 없습니다.');
+        }
+      } catch (err) {
+        console.error('Error fetching job detail:', err);
+        // 에러 시 목 데이터로 폴백
         setJobData(mockJobDetail);
         setSimilarJobs(mockSimilarJobs);
-      } catch (err) {
-        setError(err.message);
       } finally {
         setLoading(false);
       }

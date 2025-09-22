@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -9,6 +9,8 @@ import {
   Box,
   Grid,
   Fab,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,
@@ -17,37 +19,83 @@ import {
 import { useApp } from '../contexts/AppContext';
 import SearchSection from '../components/SearchSection';
 import CompanyCard from '../components/CompanyCard';
-import { mockCompanies } from '../utils/mockData';
+import { SkillMapAPI } from '../services/api';
 
 const MainPage = () => {
   const { state, actions } = useApp();
   const navigate = useNavigate();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    accuracy: 95,
+    categories: 7
+  });
+
+  // 크롤링 데이터 및 통계 로딩
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // 채용공고 데이터 가져오기
+        const jobsData = await SkillMapAPI.getJobs({
+          limit: 20,
+          page: 1
+        });
+        setJobs(jobsData || []);
+
+        // 통계 데이터 가져오기
+        try {
+          const marketOverview = await SkillMapAPI.getMarketOverview();
+          setStats({
+            totalJobs: marketOverview.totalJobs || 0,
+            accuracy: 95, // 고정값 (분석 정확도)
+            categories: marketOverview.topCategories?.length || 7
+          });
+        } catch (statsError) {
+          console.error('Error fetching stats:', statsError);
+          // 통계 로딩 실패해도 채용공고는 표시
+        }
+
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching jobs:', err);
+        setError('채용공고를 불러오는데 실패했습니다.');
+        setJobs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter companies based on search query and filters
   const filteredCompanies = useMemo(() => {
-    return mockCompanies.filter((company) => {
+    return jobs.filter((job) => {
       // Search query filter
       const matchesSearch =
         !state.searchQuery ||
-        company.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-        company.position
-          .toLowerCase()
-          .includes(state.searchQuery.toLowerCase()) ||
-        company.skills.some((skill) =>
+        (job.company_name && job.company_name.toLowerCase().includes(state.searchQuery.toLowerCase())) ||
+        (job.title && job.title.toLowerCase().includes(state.searchQuery.toLowerCase())) ||
+        (job.keywords && job.keywords.some((skill) =>
           skill.toLowerCase().includes(state.searchQuery.toLowerCase())
-        );
+        ));
 
       // Filter conditions
       const matchesExperience =
         !state.filters.experience ||
-        company.experienceLevel === state.filters.experience;
+        job.experience_level === state.filters.experience;
 
       const matchesRegion =
-        !state.filters.region || company.region === state.filters.region;
+        !state.filters.region ||
+        (job.work_location && job.work_location.includes(state.filters.region));
 
       const matchesCompanySize =
         !state.filters.companySize ||
-        company.companySize === state.filters.companySize;
+        job.job_category === state.filters.companySize;
 
       return (
         matchesSearch &&
@@ -56,7 +104,7 @@ const MainPage = () => {
         matchesCompanySize
       );
     });
-  }, [state.searchQuery, state.filters]);
+  }, [jobs, state.searchQuery, state.filters]);
 
   const handleCardClick = (company) => {
     console.log('Company card clicked:', company);
@@ -198,7 +246,7 @@ const MainPage = () => {
                 fontSize: { xs: '1.75rem', md: '2.5rem' }
               }}
             >
-              12,000+
+              {stats.totalJobs > 0 ? `${stats.totalJobs.toLocaleString()}+` : '12,000+'}
             </Typography>
             <Typography
               variant="body1"
@@ -220,7 +268,7 @@ const MainPage = () => {
                 fontSize: { xs: '1.75rem', md: '2.5rem' }
               }}
             >
-              95%
+              {stats.accuracy}%
             </Typography>
             <Typography
               variant="body1"
@@ -242,7 +290,7 @@ const MainPage = () => {
                 fontSize: { xs: '1.75rem', md: '2.5rem' }
               }}
             >
-              7
+              {stats.categories}
             </Typography>
             <Typography
               variant="body1"
@@ -262,6 +310,13 @@ const MainPage = () => {
 
       {/* Company Cards Section - Clean Design */}
       <Box sx={{ mb: 6 }}>
+        {/* Error State */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 4 }}>
+            {error}
+          </Alert>
+        )}
+
         {/* Section Header - Simplified */}
         <Box
           sx={{
@@ -330,10 +385,16 @@ const MainPage = () => {
           )}
         </Box>
 
-        {/* Cards Grid Container - Clean */}
-        {filteredCompanies.length > 0 ? (
-          <Grid container spacing={3}>
-            {filteredCompanies.map((company) => (
+        {/* Loading State */}
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          /* Cards Grid Container - Clean */
+          filteredCompanies.length > 0 ? (
+            <Grid container spacing={3}>
+              {filteredCompanies.map((company) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={company.id}>
                 <CompanyCard company={company} onClick={handleCardClick} />
               </Grid>
@@ -368,6 +429,7 @@ const MainPage = () => {
               다른 검색어를 입력하거나 필터 조건을 변경해 보세요
             </Typography>
           </Box>
+        )
         )}
       </Box>
 
