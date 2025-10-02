@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -58,13 +58,11 @@ import {
 import { SkillMapAPI } from '../services/api';
 
 const LearningPathsPage = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [learningPaths, setLearningPaths] = useState([]);
   const [filteredPaths, setFilteredPaths] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPath, setSelectedPath] = useState(null);
-  const [activeStep, setActiveStep] = useState(0);
   const [enrolledPaths, setEnrolledPaths] = useState(new Set());
   const [activeTab, setActiveTab] = useState(0);
   const [filters, setFilters] = useState({
@@ -83,13 +81,13 @@ const LearningPathsPage = () => {
 
   useEffect(() => {
     fetchLearningPaths();
-  }, []);
+  }, [fetchLearningPaths]);
 
   useEffect(() => {
     applyFilters();
-  }, [filters, learningPaths]);
+  }, [applyFilters]);
 
-  const fetchLearningPaths = async () => {
+  const fetchLearningPaths = useCallback(async () => {
     try {
       setLoading(true);
       const data = await SkillMapAPI.getLearningPaths();
@@ -109,9 +107,9 @@ const LearningPathsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...learningPaths];
 
     if (filters.search) {
@@ -140,7 +138,7 @@ const LearningPathsPage = () => {
     }
 
     setFilteredPaths(filtered);
-  };
+  }, [learningPaths, filters]);
 
   const handleEnroll = (pathId) => {
     const newEnrolled = new Set(enrolledPaths);
@@ -407,7 +405,7 @@ const LearningPathsPage = () => {
               <BookIcon color="primary" />
               학습 단계
             </Typography>
-            <Stepper activeStep={activeStep} orientation="vertical">
+            <Stepper activeStep={pathProgress.completed} orientation="vertical">
               {path.steps?.map((step, index) => {
                 const isCompleted = isEnrolled && index < pathProgress.completed;
                 const isCurrent = isEnrolled && index === pathProgress.completed;

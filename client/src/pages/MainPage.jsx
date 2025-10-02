@@ -78,24 +78,24 @@ const MainPage = () => {
       // Search query filter
       const matchesSearch =
         !state.searchQuery ||
-        (job.company_name && job.company_name.toLowerCase().includes(state.searchQuery.toLowerCase())) ||
+        (job.company && job.company.toLowerCase().includes(state.searchQuery.toLowerCase())) ||
         (job.title && job.title.toLowerCase().includes(state.searchQuery.toLowerCase())) ||
-        (job.keywords && job.keywords.some((skill) =>
+        (job.tags && job.tags.some((skill) =>
           skill.toLowerCase().includes(state.searchQuery.toLowerCase())
         ));
 
-      // Filter conditions
+      // Filter conditions (adjusted for API response format)
       const matchesExperience =
         !state.filters.experience ||
-        job.experience_level === state.filters.experience;
+        job.experience === state.filters.experience;
 
       const matchesRegion =
         !state.filters.region ||
-        (job.work_location && job.work_location.includes(state.filters.region));
+        (job.location && job.location.includes(state.filters.region));
 
       const matchesCompanySize =
         !state.filters.companySize ||
-        job.job_category === state.filters.companySize;
+        job.category === state.filters.companySize;
 
       return (
         matchesSearch &&

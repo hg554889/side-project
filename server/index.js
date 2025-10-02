@@ -125,12 +125,50 @@ app.get('/health', (req, res) => {
 const { swaggerUi, specs } = require('./swagger');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
+// DIRECT TEST ENDPOINT - NO MIDDLEWARE
+app.get('/api/test-data', async (req, res) => {
+  console.log('🔥 Direct endpoint called!');
+  try {
+    const mongoose = require('mongoose');
+    console.log('DB state:', mongoose.connection.readyState);
+
+    const db = mongoose.connection.db;
+    const collection = db.collection('job_postings');
+
+    const totalCount = await collection.countDocuments({});
+    const activeCount = await collection.countDocuments({ is_active: true });
+    const jobs = await collection.find({ is_active: true }).limit(3).toArray();
+
+    console.log('Total jobs:', totalCount);
+    console.log('Active jobs:', activeCount);
+    console.log('Found jobs:', jobs.length);
+
+    res.json({
+      success: true,
+      totalJobs: totalCount,
+      activeJobs: activeCount,
+      count: jobs.length,
+      data: jobs.map(job => ({
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        location: job.location
+      }))
+    });
+  } catch (error) {
+    console.error('Direct endpoint error:', error);
+    res.json({ error: error.message, stack: error.stack });
+  }
+});
+
 // API Routes
 app.use('/api/jobs', jobRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 console.log('🔧 Loading crawled job routes...');
+console.log('crawledJobRoutes type:', typeof crawledJobRoutes);
+console.log('crawledJobRoutes stack length:', crawledJobRoutes.stack?.length);
 app.use('/api/crawled', crawledJobRoutes);
 console.log('✅ Crawled job routes loaded');
 
@@ -173,9 +211,9 @@ app.get('/api/health', async (req, res) => {
 
 // Catch-all handler: send back React's index.html file for client-side routing
 app.use((req, res, next) => {
-  // Don't serve index.html for API routes
+  // Skip for API routes - let them go to error handler if not found
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
+    return next();
   }
 
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));

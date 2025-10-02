@@ -7,7 +7,7 @@
 const API_CONFIG = {
   baseURL: process.env.NODE_ENV === 'production'
     ? '/api'
-    : 'http://localhost:3000/api',
+    : 'http://localhost:3001/api', // /api 경로 추가
   timeout: 10000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -57,21 +57,22 @@ export class SkillMapAPI {
    */
   static async getJobs(params = {}) {
     try {
-      // 쿼리 파라미터 구성
+      // 일단 /api/jobs 엔드포인트 사용 (작동하는 엔드포인트)
       const queryParams = new URLSearchParams();
 
-      if (params.search) queryParams.append('keyword', params.search);
-      if (params.jobCategory) queryParams.append('category', params.jobCategory);
-      if (params.experience) queryParams.append('experience', params.experience);
-      if (params.region) queryParams.append('location', params.region);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.jobCategory) queryParams.append('jobCategory', params.jobCategory);
+      if (params.experience) queryParams.append('experienceLevel', params.experience);
+      if (params.region) queryParams.append('region', params.region);
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
 
-      const endpoint = `/crawled/jobs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const endpoint = `/jobs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       const response = await apiCall(endpoint, { method: 'GET' });
 
       if (response.success) {
-        return response.data || [];
+        // response.data.jobs가 실제 채용공고 배열
+        return response.data.jobs || [];
       } else {
         throw new Error(response.error || 'Failed to fetch jobs');
       }

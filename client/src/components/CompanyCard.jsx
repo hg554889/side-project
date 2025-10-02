@@ -139,7 +139,7 @@ const CompanyCard = ({ company, onClick }) => {
                 lineHeight: 1.2,
               }}
             >
-              {company.company_name}
+              {company.company}
             </Typography>
           </Box>
 
@@ -168,7 +168,7 @@ const CompanyCard = ({ company, onClick }) => {
               overflow: 'hidden',
             }}
           >
-            {(company.keywords || []).slice(0, 3).map((skill, index) => (
+            {(company.tags || []).slice(0, 3).map((skill, index) => (
               <Chip
                 key={index}
                 label={skill}
@@ -188,9 +188,9 @@ const CompanyCard = ({ company, onClick }) => {
                 }}
               />
             ))}
-            {(company.keywords || []).length > 3 && (
+            {(company.tags || []).length > 3 && (
               <Chip
-                label={`+${(company.keywords || []).length - 3}`}
+                label={`+${(company.tags || []).length - 3}`}
                 size="small"
                 variant="filled"
                 sx={{
@@ -226,7 +226,7 @@ const CompanyCard = ({ company, onClick }) => {
                 fontWeight: 500,
               }}
             >
-              {company.work_location || '지역미상'}
+              {company.location || '지역미상'}
             </Typography>
           </Box>
 
@@ -240,7 +240,7 @@ const CompanyCard = ({ company, onClick }) => {
                 fontWeight: 600,
               }}
             >
-              {formatSalary(company.salary_range)}
+              {formatSalary(company.salary)}
             </Typography>
           </Box>
         </Box>

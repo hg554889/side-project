@@ -52,4 +52,4 @@ build/
 # Crawling
 __pycache__
 .venv/
-__init__.py
+__init__.pynul

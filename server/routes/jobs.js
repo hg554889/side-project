@@ -10,6 +10,41 @@ const {
 } = require('../utils/dataAdapter');
 
 /**
+ * @route   GET /api/jobs/raw
+ * @desc    Get raw job data for testing
+ * @access  Public
+ */
+router.get('/raw', async (req, res) => {
+  try {
+    console.log('Raw endpoint called');
+
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({ error: 'Database not connected', readyState: mongoose.connection.readyState });
+    }
+
+    const db = mongoose.connection.db;
+    const collection = db.collection('job_postings');
+
+    const totalCount = await collection.countDocuments({ is_active: true });
+    console.log('Total active jobs:', totalCount);
+
+    const jobs = await collection.find({ is_active: true }).limit(3).toArray();
+    console.log('Found jobs:', jobs.length);
+
+    res.json({
+      success: true,
+      totalActive: totalCount,
+      count: jobs.length,
+      data: jobs
+    });
+  } catch (error) {
+    console.error('Raw endpoint error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
+/**
  * @route   GET /api/jobs
  * @desc    Get job postings with filtering and pagination
  * @access  Public
@@ -28,31 +63,10 @@ router.get('/', async (req, res, next) => {
       sortOrder = 'desc',
     } = req.query;
 
-    // Build query for crawled jobs
+    // Build simple query for testing
     const query = { is_active: true };
 
-    // Convert legacy filters to crawled format
-    const legacyFilters = { jobCategory, experienceLevel, region, companySize };
-    const crawledFilters = convertLegacyFiltersToCrawled(legacyFilters);
-
-    // Apply filters
-    if (crawledFilters.job_category) {
-      query.job_category = { $regex: crawledFilters.job_category, $options: 'i' };
-    }
-
-    if (crawledFilters.experience_level) {
-      query.experience_level = crawledFilters.experience_level;
-    }
-
-    if (crawledFilters.location || region) {
-      const locationQuery = crawledFilters.location || region;
-      query.work_location = { $regex: locationQuery, $options: 'i' };
-    }
-
-    // Search functionality
-    if (search) {
-      query.$text = { $search: search };
-    }
+    console.log('Query:', query); // Debug log
 
     // Pagination
     const pageNum = parseInt(page);
@@ -63,18 +77,36 @@ router.get('/', async (req, res, next) => {
     const sortConfig = {};
     sortConfig[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Execute query
+    // Execute query directly on collection to bypass model field mapping
+    const db = require('mongoose').connection.db;
+    const collection = db.collection('job_postings');
+
     const [crawledJobs, totalCount] = await Promise.all([
-      CrawledJob.find(query)
+      collection.find(query)
         .sort(sortConfig)
         .skip(skip)
         .limit(limitNum)
-        .lean(),
-      CrawledJob.countDocuments(query),
+        .toArray(),
+      collection.countDocuments(query),
     ]);
 
-    // Convert to legacy format
-    const legacyJobs = convertCrawledJobsToLegacy(crawledJobs);
+    // Return raw data for debugging
+    console.log('Found jobs:', crawledJobs.length);
+    if (crawledJobs.length > 0) {
+      console.log('First job sample:', JSON.stringify(crawledJobs[0], null, 2));
+    }
+
+    // Convert to simple format
+    const legacyJobs = crawledJobs.map(job => ({
+      id: job.id || job._id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      salary: job.salary,
+      tags: job.tags || [],
+      category: job.job_category,
+      url: job.url
+    }));
 
     // Calculate pagination
     const totalPages = Math.ceil(totalCount / limitNum);
