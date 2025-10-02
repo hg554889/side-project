@@ -11,6 +11,7 @@ import {
   Fab,
   CircularProgress,
   Alert,
+  Pagination,
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,
@@ -27,6 +28,8 @@ const MainPage = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({
     totalJobs: 0,
     accuracy: 95,
@@ -40,11 +43,13 @@ const MainPage = () => {
         setLoading(true);
 
         // 채용공고 데이터 가져오기
-        const jobsData = await SkillMapAPI.getJobs({
-          limit: 20,
-          page: 1
-        });
-        setJobs(jobsData || []);
+        const response = await fetch(`http://localhost:3001/api/jobs?page=${currentPage}&limit=20`);
+        const data = await response.json();
+
+        if (data.success) {
+          setJobs(data.data.jobs || []);
+          setTotalPages(data.data.totalPages || 1);
+        }
 
         // 통계 데이터 가져오기
         try {
@@ -70,7 +75,12 @@ const MainPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [currentPage]);
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Filter companies based on search query and filters
   const filteredCompanies = useMemo(() => {
@@ -430,6 +440,38 @@ const MainPage = () => {
             </Typography>
           </Box>
         )
+        )}
+
+        {/* Pagination */}
+        {!loading && filteredCompanies.length > 0 && totalPages > 1 && (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              mt: 6,
+              mb: 4,
+            }}
+          >
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              showFirstButton
+              showLastButton
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                },
+                '& .Mui-selected': {
+                  backgroundColor: '#2563eb !important',
+                  color: 'white',
+                },
+              }}
+            />
+          </Box>
         )}
       </Box>
 
